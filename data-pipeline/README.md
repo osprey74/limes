@@ -29,3 +29,13 @@ uv run python scripts/mesh_check.py --jartic data/raw/typeD_hokkaido.csv \
 ```
 
 `mesh_check` also writes `data/mesh/<area>/result.geojson` for viewing in QGIS.
+
+```sh
+# Street-level images for the ways mesh_check flags (needs a Mapillary client token, read scope)
+MAPILLARY_TOKEN=MLY|... uv run python scripts/mapillary_check.py collect --work data/mesh/16_58496_24055_6
+# Open data/mesh/<area>/mapillary_review.html, judge each way, export judgments.json, then:
+uv run python scripts/mapillary_check.py summarize --work data/mesh/16_58496_24055_6 \
+  --judgments judgments.json --report ../docs/phase0/mapillary-sapporo-kita24.md
+```
+
+The review page links signed, expiring Mapillary thumbnails (CC BY-SA) and stays local under `data/`.
