@@ -1,5 +1,5 @@
 [workspace]
-members = ["limes-core", "limes-cli"]
+members = ["limes-core", "limes-cli", "limes-ffi"]
 resolver = "3"
 
 [workspace.package]

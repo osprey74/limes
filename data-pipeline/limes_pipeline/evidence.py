@@ -46,7 +46,10 @@ from .mesh_check import (
     bearing,
 )
 
-ROAD_HIGHWAYS = CAR_HIGHWAYS | {"service"}
+# highway=track (mostly unpaved farm and forest tracks) is left out (decided 2026-11-09):
+# they are roads under 道路交通法第2条 when open to the public, but OSM can't tell, and
+# they made up a fifth of Hokkaido's database. Paved farm roads are tagged as ordinary roads.
+ROAD_HIGHWAYS = (CAR_HIGHWAYS - {"track"}) | {"service"}
 SEGMENT_M = 200.0
 MIN_PIECE_M = 10.0  # cut points closer than this to each other or to an end are dropped
 TILE_ZOOM = 10  # about 30 km tiles; each gets its own local projection

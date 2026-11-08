@@ -7,6 +7,7 @@
 
 use std::path::Path;
 
+pub use rusqlite::Error;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 

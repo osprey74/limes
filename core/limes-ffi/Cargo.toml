@@ -1,0 +1,23 @@
+[package]
+name = "limes-ffi"
+description = "UniFFI bindings of limes-core for the iOS (Swift) and Android (Kotlin) apps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]
+name = "limes_ffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+limes-core = { path = "../limes-core" }
+uniffi = { version = "0.32", features = ["cli"] }
+thiserror = "2"
+
+[dev-dependencies]
+serde_json.workspace = true

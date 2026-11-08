@@ -6,7 +6,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 
 | パス | 内容 | 状態 |
 | --- | --- | --- |
-| `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・CLIまで） |
+| `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFIまで） |
 | `ios/` | Swift / SwiftUI、MapLibre Native、StoreKit 2 | 未着手 |
 | `android/` | Kotlin / Jetpack Compose、MapLibre Native、Play Billing | 未着手 |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |
@@ -20,6 +20,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 - JARTICの規制条件は対象ブロック（NO.41-85）と除外ブロック（NO.86-130）の両方を評価する（`conditions.rs`）
 - 信頼度lowで60を表示しない。道路幅員だけを根拠に60と判定しない（幅員区分では中央線の有無を予測できない。`docs/phase0/findings.md` 6.3）
 - 中央線の証拠として、地理院航空写真からの自動検出を使う（60・mid）。証拠のない一般道路は安全側に倒して30（low）
+- OSM `highway=track`（未舗装の農道・林道が中心）はデータベースから除外する（2026-11-09決定）。その上を走ると照合先がなく「不明」になる
 - 判定不能時は数値を出さず「不明」
 - 速度超過の警告・表示は実装しない
 - 走行中に速度マップを開くと確認ダイアログ（［走行画面に戻る］／［同乗者が操作する］）

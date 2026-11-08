@@ -41,6 +41,12 @@ impl SegmentSource for Reader {
     }
 }
 
+impl<S: SegmentSource + ?Sized> SegmentSource for &S {
+    fn segments_near(&self, lon: f64, lat: f64, radius_m: f64) -> Vec<Segment> {
+        (**self).segments_near(lon, lat, radius_m)
+    }
+}
+
 impl<S: SegmentSource> SegmentSource for [S] {
     fn segments_near(&self, lon: f64, lat: f64, radius_m: f64) -> Vec<Segment> {
         self.iter()
