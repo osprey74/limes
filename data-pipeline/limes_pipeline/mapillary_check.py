@@ -232,21 +232,31 @@ figcaption { font-size:12px; color:var(--muted); }
 button { padding:6px 14px; }
 a { color:var(--accent); }
 .none { color:var(--muted); }
+.draft { display:inline-block; font-size:13px; padding:2px 8px; border-radius:4px; background:#fde68a; color:#1a1a1a; margin-bottom:6px; }
+.draft.unclear { background:transparent; color:var(--muted); border:1px solid var(--line); }
+section.edited .draft { text-decoration:line-through; }
 """
 
 PAGE_SCRIPT = """
 const KEY = "limes-mapillary-review:" + document.body.dataset.area;
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+const draft = {};
+document.querySelectorAll("section[data-draft]").forEach(sec => { draft[sec.dataset.id] = sec.dataset.draft; });
 function refresh() {
-  const done = document.querySelectorAll("section[data-id]").length;
-  const answered = Object.keys(saved).length;
-  document.getElementById("progress").textContent = `${answered} / ${done} 判定済み`;
+  const total = document.querySelectorAll("section[data-id]").length;
+  const merged = Object.assign({}, draft, saved);
+  document.getElementById("progress").textContent =
+    `判定あり ${Object.keys(merged).length} / ${total}（下書き ${Object.keys(draft).length}、手動 ${Object.keys(saved).length}）`;
+  document.querySelectorAll("section[data-draft]").forEach(sec => {
+    sec.classList.toggle("edited", sec.dataset.id in saved && saved[sec.dataset.id] !== sec.dataset.draft);
+  });
 }
 document.querySelectorAll("section[data-id]").forEach(sec => {
   const id = sec.dataset.id;
+  const current = saved[id] || draft[id];
   sec.querySelectorAll("input").forEach(input => {
-    if (saved[id] === input.value) input.checked = true;
+    if (current === input.value) input.checked = true;
     input.addEventListener("change", () => {
       saved[id] = input.value;
       try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
@@ -255,7 +265,7 @@ document.querySelectorAll("section[data-id]").forEach(sec => {
   });
 });
 document.getElementById("export").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(saved, null, 2)], {type: "application/json"});
+  const blob = new Blob([JSON.stringify(Object.assign({}, draft, saved), null, 2)], {type: "application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "judgments.json";
@@ -265,12 +275,27 @@ refresh();
 """
 
 
-def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None = None) -> str:
-    """Ways already in `judged` are left off the page."""
+def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None = None,
+                draft: dict[str, str] | None = None, notes: dict[str, str] | None = None) -> str:
+    """Ways already in `judged` are left off the page. `draft` verdicts (Claude's) are pre-selected,
+    except "unclear", which is only noted; drafted ways come first in each group."""
     e = html.escape
+    draft, notes = draft or {}, notes or {}
     ways = [w for w in ways if str(w.osm_id) not in (judged or {})]
     sections = []
-    for way in sorted(ways, key=lambda w: (w.group, -w.length_m)):
+    def has_draft(w):
+        return draft.get(str(w.osm_id), "unclear") != "unclear"
+    for way in sorted(ways, key=lambda w: (w.group, not has_draft(w), -w.length_m)):
+        verdict = draft.get(str(way.osm_id))
+        note = f'（{e(notes[str(way.osm_id)])}）' if str(way.osm_id) in notes else ""
+        if verdict and verdict != "unclear":
+            badge = f'<div class="draft">Claude の下書き：{e(VERDICTS[verdict])}{note}</div>'
+            draft_attr = f' data-draft="{e(verdict)}"'
+        elif verdict:
+            badge = f'<div class="draft unclear">Claude：判別不可{note}</div>'
+            draft_attr = ""
+        else:
+            badge, draft_attr = "", ""
         lon, lat = LineString(way.line).interpolate(0.5, normalized=True).coords[0]
         osm = f"https://www.openstreetmap.org/way/{way.osm_id}"
         # Google Maps URLs (https://developers.google.com/maps/documentation/urls/get-started)
@@ -291,13 +316,13 @@ def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None 
             f'<label><input type="radio" name="v{way.osm_id}" value="{key}"> {label}</label>'
             for key, label in VERDICTS.items())
         sections.append(
-            f'<section data-id="{way.osm_id}"><h2>要確認 {way.group}（{e(GROUPS[way.group])}）：{e(way.name or "（名称なし）")}</h2>'
+            f'<section data-id="{way.osm_id}"{draft_attr}><h2>要確認 {way.group}（{e(GROUPS[way.group])}）：{e(way.name or "（名称なし）")}</h2>'
             f'<div class="meta">{e(way.highway)}{"・一方通行" if way.oneway in ("yes", "-1") else ""}'
             f'{f"・車線数 {e(way.lanes)}" if way.lanes else ""}・地理院幅員 {e(way.width)}・{way.length_m:.0f} m・'
             f'<a href="{osm}" target="_blank" rel="noopener">OSM way {way.osm_id}</a>・'
             f'<a href="{e(satellite)}" target="_blank" rel="noopener">Google マップ（航空写真）</a>・'
             f'<a href="{e(street)}" target="_blank" rel="noopener">ストリートビュー</a></div>'
-            f'{body}<div class="verdict">{radios}</div></section>')
+            f'{badge}{body}<div class="verdict">{radios}</div></section>')
     return (
         '<!doctype html><html lang="ja"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -363,6 +388,10 @@ def main(argv: list[str] | None = None) -> None:
     c.add_argument("--max-per-group", type=int, default=MAX_PER_GROUP)
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--judged", type=Path, nargs="*", default=[], help="earlier judgments.json; those ways are not shown again")
+    g = sub.add_parser("page", help="rewrite the review page from collected data, optionally with draft verdicts")
+    g.add_argument("--work", type=Path, required=True)
+    g.add_argument("--draft", type=Path, help="draft verdicts {osm_id: verdict}, pre-selected on the page")
+    g.add_argument("--notes", type=Path, help="short reasons {osm_id: text} shown next to the draft")
     s = sub.add_parser("summarize", help="turn exported judgments into a report")
     s.add_argument("--work", type=Path, required=True)
     s.add_argument("--judgments", type=Path, nargs="+", required=True, help="one or more exported judgments.json")
@@ -381,6 +410,14 @@ def main(argv: list[str] | None = None) -> None:
         page = args.work / "mapillary_review.html"
         page.write_text(render_page(ways, args.area, judged), encoding="utf-8")
         print(f"{sum(1 for w in ways if w.images)} / {len(ways)} ways have images; open {page}")
+    elif args.command == "page":
+        data = json.loads(ways_path.read_text(encoding="utf-8"))
+        ways = [ReviewWay(**{**w, "line": [tuple(c) for c in w["line"]]}) for w in data["ways"]]
+        draft = json.loads(args.draft.read_text(encoding="utf-8")) if args.draft else None
+        notes = json.loads(args.notes.read_text(encoding="utf-8")) if args.notes else None
+        page = args.work / "mapillary_review.html"
+        page.write_text(render_page(ways, data["area"], draft=draft, notes=notes), encoding="utf-8")
+        print(f"wrote {page}")
     else:
         data = json.loads(ways_path.read_text(encoding="utf-8"))
         args.report.parent.mkdir(parents=True, exist_ok=True)

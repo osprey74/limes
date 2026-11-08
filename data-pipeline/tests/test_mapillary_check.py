@@ -87,3 +87,14 @@ def test_summarize_weights_by_length():
     assert "| A | 路面画像あり | 1 本 / 0.3 km | — | 1 本 / 0.1 km | — | — | 75% |" in report
     assert "| A | 航空写真のみ | 1 本 / 0.1 km | — | — | — | — | 100% |" in report
     assert "| A | 計 | 2 本 / 0.3 km | — | 1 本 / 0.1 km | — | — | 78% |" in report
+
+
+def test_render_page_preselects_draft_but_not_unclear():
+    ways = [ReviewWay("C", 1, "residential", "", "3m未満", 100, LINE),
+            ReviewWay("C", 2, "residential", "", "3m未満", 300, LINE)]
+    page = render_page(ways, "経堂", draft={"1": "none", "2": "unclear"}, notes={"1": "bare asphalt"})
+    assert 'data-id="1" data-draft="none"' in page
+    assert 'data-id="2"><h2>' in page
+    assert "Claude の下書き：中央線なし（bare asphalt）" in page
+    assert "Claude：判別不可" in page
+    assert page.index('data-id="1"') < page.index('data-id="2"')  # drafted first
