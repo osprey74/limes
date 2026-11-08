@@ -43,8 +43,7 @@ def prefecture_link(entry: dict, prefecture: str) -> str:
     for target in entry.get("targetList", []):
         if target.get("link", "").endswith(suffix):
             return target["link"]
-    available = sorted(PurePosixPath(t["link"]).stem.removeprefix("typeD_") for t in entry.get("targetList", []))
-    raise LookupError(f"prefecture {prefecture!r} not found; available: {', '.join(available)}")
+    raise LookupError(f"prefecture {prefecture!r} not found; available: {', '.join(sorted(prefecture_slugs(entry)))}")
 
 
 def zip_member_name(info: zipfile.ZipInfo) -> str:
@@ -66,9 +65,17 @@ def extract_csv(zip_path: Path, out_dir: Path) -> tuple[Path, str]:
     return target, original
 
 
-def fetch(prefecture: str, out_dir: Path) -> dict:
+def current_release() -> dict:
+    return regulation_entry(parse_index(_get(INDEX_URL)))
+
+
+def prefecture_slugs(entry: dict) -> list[str]:
+    return [PurePosixPath(t["link"]).stem.removeprefix("typeD_") for t in entry.get("targetList", [])]
+
+
+def fetch(prefecture: str, out_dir: Path, entry: dict | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
-    entry = regulation_entry(parse_index(_get(INDEX_URL)))
+    entry = entry or current_release()
     link = prefecture_link(entry, prefecture)
     data = _get(BASE_URL + link)
     zip_path = out_dir / PurePosixPath(link).name
@@ -80,8 +87,10 @@ def fetch(prefecture: str, out_dir: Path) -> dict:
         "releaseDay": entry.get("releaseDay"),
         "link": BASE_URL + link,
         "zipSha256": hashlib.sha256(data).hexdigest(),
+        "zipBytes": len(data),
         "csvName": original,
         "csvPath": csv_path.name,
+        "csvBytes": csv_path.stat().st_size,
     }
     (out_dir / f"{zip_path.stem}.meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"

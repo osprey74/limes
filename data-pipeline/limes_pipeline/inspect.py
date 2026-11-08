@@ -36,6 +36,8 @@ class CodeStats:
     center_line_filled: int = 0
     time_conditioned: int = 0
     vehicle_conditioned: int = 0
+    undefined_weekday: int = 0
+    unclear_vehicle: int = 0
     coords_empty: int = 0
     coords_invalid: int = 0
     outside_japan: int = 0
@@ -53,6 +55,8 @@ class Report:
     versions: Counter = dc_field(default_factory=Counter)
     codes: Counter = dc_field(default_factory=Counter)
     code_names: dict[str, Counter] = dc_field(default_factory=lambda: defaultdict(Counter))
+    # 片側・両側コード (NO.136) of code 17; blank means not registered as one side.
+    no_overtaking_sides: Counter = dc_field(default_factory=Counter)
     mojibake_rows: int = 0
     duplicate_keys: int = 0
     targets: dict[str, CodeStats] = dc_field(
@@ -101,6 +105,8 @@ def inspect(path: Path, bbox: tuple[float, float, float, float] | None = None) -
         code = jartic.field(row, Col.REGULATION_CODE) or EMPTY
         report.codes[code] += 1
         report.code_names[code][jartic.field(row, Col.REGULATION_NAME) or EMPTY] += 1
+        if code == jartic.NO_OVERTAKING_CROSSING:
+            report.no_overtaking_sides[jartic.field(row, Col.SIDE) or EMPTY] += 1
         key = jartic.field(row, Col.UNIQUE_KEY)
         if key:
             if key in seen_keys:
@@ -130,6 +136,10 @@ def inspect(path: Path, bbox: tuple[float, float, float, float] | None = None) -
             stats.time_conditioned += 1
         if jartic.has_vehicle_condition(row):
             stats.vehicle_conditioned += 1
+        if jartic.has_undefined_weekday(row):
+            stats.undefined_weekday += 1
+        if jartic.has_unclear_vehicle(row):
+            stats.unclear_vehicle += 1
         _check_coords(row, stats, bbox)
     return report
 

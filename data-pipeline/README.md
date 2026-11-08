@@ -17,3 +17,15 @@ uv run python scripts/inspect_jartic.py data/raw/typeD_hokkaido.csv \
 ```
 
 Prefecture slugs are the ones in the ZIP names (`hokkaido`, `tokyo`, `gumma`, ...). An unknown slug prints the available list.
+
+```sh
+# All 47 prefectures, one row each (downloads ~320 MB; CSVs are deleted after inspection)
+uv run python scripts/survey_jartic.py --out-dir data/survey --report ../docs/phase0/jartic-survey-202609.md
+
+# Apply the decision stages to OSM ways in a test area (OSM via Overpass, GSI road width tiles)
+uv run python scripts/mesh_check.py --jartic data/raw/typeD_hokkaido.csv \
+  --jartic-meta data/raw/typeD_hokkaido.meta.json \
+  --center 141.35,43.09 --tiles 6 --report ../docs/phase0/mesh-sapporo-kita24.md
+```
+
+`mesh_check` also writes `data/mesh/<area>/result.geojson` for viewing in QGIS.

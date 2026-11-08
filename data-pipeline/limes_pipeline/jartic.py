@@ -27,6 +27,7 @@ class Col:
     EXCLUDED_COORDS = 30
     ROAD_TYPE = 32
     ROUTE_NAME = 33
+    SIDE = 136
     SPEED = 138
     ZONE30 = 139
     VARIABLE_SPEED = 140
@@ -40,10 +41,19 @@ CONDITION_START = 41
 CONDITION_BLOCKS = 5
 CONDITION_WIDTH = 9
 ALL_DAY_START = {"", "0", "0000"}
-ALL_DAY_END = {"", "2400"}
-# Vehicle code category A: 1 = 車両 (all vehicles), 10 = 自動車 (all motor vehicles).
-# Either alone does not narrow the regulation for a car driver.
-ALL_VEHICLES_A = {"1", "10"}
+# "0"-"0" appears in unused blocks (e.g. Aichi), so an end of 0 also means unset.
+ALL_DAY_END = {"", "2400", "0", "0000"}
+ALL_YEAR_START = {"", "101", "0101"}
+ALL_YEAR_END = {"", "1231"}
+# 共通コード「曜日コード」. Some prefectures use values outside this set (e.g. 9).
+WEEKDAY_CODES = {"1", "2", "3", "4", "5", "6", "99"}
+# Vehicle codes (共通コード「対象コード」) are bit flags written as decimal digits,
+# one category per column (A-D); several targets are summed. In category A the
+# lowest five digits are 車両, 自動車, 乗用, 普乗 and 普通, each of which includes an
+# ordinary passenger car. Some prefectures fill unused categories with 0.
+ORDINARY_CAR_A_DIGITS = 5
+VEHICLE_D_OTHER = "100000000000000"  # その他: details only in 規制条件 (NO.131), often blank
+NO_VEHICLE = {"", "0"}
 
 TARGET_CODES = {
     "15": "中央線",
@@ -55,6 +65,9 @@ TARGET_CODES = {
 GEOMETRY_TYPES = {"1": "点", "2": "線", "3": "面"}
 ROAD_TYPES = {"1": "一般道", "2": "高速自動車国道", "3": "自動車専用道路", "99": "その他"}
 UPDATE_CLASS_ABOLISHED = "3"
+# 追越しのための右側部分はみ出し通行禁止. Marked on both sides it doubles as the
+# center line marking (警察庁「交通規制基準」第10 中央線 留意事項1).
+NO_OVERTAKING_CROSSING = "17"
 
 Coords = list[list[tuple[float, float]]]
 
@@ -104,21 +117,42 @@ def _blocks(row: list[str]) -> Iterator[list[str]]:
 
 
 def has_time_condition(row: list[str]) -> bool:
-    """True when a period, weekday or time window other than 0:00-24:00 is set."""
+    """True when a period other than all year, a defined weekday code or a time window
+    other than 0:00-24:00 is set."""
     for period_start, period_end, time_start, time_end, weekday, *_ in _blocks(row):
-        if period_start or period_end or weekday:
+        if period_start not in ALL_YEAR_START or period_end not in ALL_YEAR_END:
+            return True
+        if weekday in WEEKDAY_CODES:
             return True
         if time_start not in ALL_DAY_START or time_end not in ALL_DAY_END:
             return True
     return False
 
 
-def has_vehicle_condition(row: list[str]) -> bool:
-    """True when the regulation targets specific vehicles rather than all vehicles."""
+def has_undefined_weekday(row: list[str]) -> bool:
+    return any(block[4] and block[4] not in WEEKDAY_CODES for block in _blocks(row))
+
+
+def covers_ordinary_car(code_a: str) -> bool:
+    return code_a not in NO_VEHICLE and "1" in code_a[-ORDINARY_CAR_A_DIGITS:]
+
+
+def _vehicle_blocks(row: list[str]) -> Iterator[tuple[str, str, str, str]]:
     for *_, a, b, c, d in _blocks(row):
-        if not (a or b or c or d):
-            continue
-        if a in ALL_VEHICLES_A and not (b or c or d):
-            continue
-        return True
-    return False
+        if any(v not in NO_VEHICLE for v in (a, b, c, d)):
+            yield a, b, c, d
+
+
+def has_unclear_vehicle(row: list[str]) -> bool:
+    """Only category D その他 is set and 規制条件 is blank, so the target is unknown."""
+    return not field(row, 131) and any(
+        a in NO_VEHICLE and b in NO_VEHICLE and c in NO_VEHICLE and d == VEHICLE_D_OTHER
+        for a, b, c, d in _vehicle_blocks(row)
+    )
+
+
+def has_vehicle_condition(row: list[str]) -> bool:
+    """True when a target block leaves out ordinary passenger cars (clear cases only)."""
+    if has_unclear_vehicle(row):
+        return False
+    return any(not covers_ordinary_car(a) for a, _, _, _ in _vehicle_blocks(row))

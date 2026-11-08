@@ -40,10 +40,13 @@ def test_parse_coords_sections_and_points():
 def test_all_day_and_all_vehicles_are_not_conditions():
     row = make_row()
     row[43 - 1], row[44 - 1] = "0", "2400"  # block 1, 0:00-24:00
-    row[46 - 1] = "1"  # 車両
+    row[46 - 1], row[47 - 1], row[48 - 1] = "1", "0", "0"  # 車両, unused categories 0-filled
+    row[50 - 1], row[51 - 1] = "0101", "1231"  # block 2, all year
     row[55 - 1] = "10"  # block 2, 自動車
+    row[54 - 1] = "9"  # block 2, weekday code outside the spec
     assert not jartic.has_time_condition(row)
     assert not jartic.has_vehicle_condition(row)
+    assert jartic.has_undefined_weekday(row)
 
 
 def test_condition_detection_looks_at_every_block():
@@ -51,14 +54,42 @@ def test_condition_detection_looks_at_every_block():
     row[52 - 1], row[53 - 1] = "700", "900"  # block 2, 7:00-9:00
     assert jartic.has_time_condition(row)
     row = make_row()
-    row[81 - 1] = "1111100"  # block 5, weekday
+    row[81 - 1] = "2"  # block 5, 土曜・日曜・休日
+    assert jartic.has_time_condition(row)
+    assert not jartic.has_undefined_weekday(row)
+    row = make_row()
+    row[59 - 1], row[60 - 1] = "1201", "331"  # block 3, winter only
     assert jartic.has_time_condition(row)
     row = make_row()
-    row[85 - 1] = "1"  # block 5, vehicle D
+    row[43 - 1], row[44 - 1] = "0", "0"  # unused block filled with 0-0 (Aichi)
+    assert not jartic.has_time_condition(row)
+
+
+def test_vehicle_condition_means_ordinary_cars_are_left_out():
+    row = make_row()
+    row[85 - 1] = "1"  # block 5, D: 二輪 only
     assert jartic.has_vehicle_condition(row)
     row = make_row()
-    row[46 - 1], row[48 - 1] = "1", "10"  # 車両 combined with a category C code
+    row[48 - 1] = "100000"  # C: 大貨 only
     assert jartic.has_vehicle_condition(row)
+    row = make_row()
+    row[46 - 1], row[48 - 1], row[49 - 1] = "10", "1000000000", "1000"  # 自動車 + けん引 + 原付 (Shizuoka)
+    assert not jartic.has_vehicle_condition(row)
+    row = make_row()
+    row[46 - 1] = "1000"  # 普乗
+    assert not jartic.has_vehicle_condition(row)
+    row = make_row()
+    row[46 - 1] = "100000"  # 中乗 only
+    assert jartic.has_vehicle_condition(row)
+
+
+def test_unclear_vehicle_is_counted_separately():
+    row = make_row()
+    row[49 - 1] = jartic.VEHICLE_D_OTHER  # その他 with blank 規制条件 (Nagano)
+    assert jartic.has_unclear_vehicle(row)
+    assert not jartic.has_vehicle_condition(row)
+    row[131 - 1] = "大型等を除く"
+    assert not jartic.has_unclear_vehicle(row)
 
 
 def test_inspect_counts_targets_and_quality(tmp_path):
@@ -135,3 +166,27 @@ def test_extract_csv_decodes_shift_jis_member_name(tmp_path):
     assert original == "北海道警_202609_k_2.1.csv"
     assert csv_path == tmp_path / "typeD_hokkaido.csv"
     assert csv_path.read_bytes() == b"data"
+
+
+def test_survey_summary_and_table(tmp_path):
+    from limes_pipeline import survey
+
+    path = tmp_path / "pref.csv"
+    write_csv(path, [
+        make_row(REGULATION_CODE="15", UNIQUE_KEY="A"),
+        make_row(REGULATION_CODE="17", UNIQUE_KEY="B"),
+        make_row(REGULATION_CODE="17", UNIQUE_KEY="B2", SIDE="1"),
+        make_row(REGULATION_CODE="112", ROAD_TYPE="1", UNIQUE_KEY="C"),
+    ])
+    meta = {"prefecture": "chiba", "csvName": "千葉県警察_202609_k_2.1.csv", "targetMonth": "2026年09月",
+            "zipBytes": 1_000_000, "csvBytes": 5_000_000}
+    summary = survey.summarize(meta, inspect(path))
+    assert summary["targets"]["15"]["count"] == 1
+    assert summary["targets"]["112"]["roadTypeFilled"] == 1
+    assert summary["extra"]["17"] == 2
+    assert summary["noOvertakingSides"] == {"(空欄)": 1, "1": 1}
+
+    markdown = survey.render_markdown([summary], {"targetMonth": "2026年09月"}, used_on=date(2026, 11, 8))
+    assert "| 千葉県警察 | 4 | 1 | 0 | 2 | 0 | 0 | 1 | 0 | 0 |" in markdown
+    assert "| 千葉県警察 | 100% | 0% |" in markdown
+    assert "| 千葉県警察 | 2 | 1 | 1: 1 |" in markdown
