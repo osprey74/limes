@@ -20,6 +20,10 @@ Estimates always come with a confidence level. Actual road signs and markings ta
 
 ## Data sources
 
-- Traffic regulation data: 「交通規制情報」（公益財団法人日本道路交通情報センター）（https://www.jartic.or.jp/service/opendata/）, processed by this project
+- Traffic regulation data: 「交通規制情報」（公益財団法人日本道路交通情報センター）（<https://www.jartic.or.jp/service/opendata/>）, processed by this project
 - © OpenStreetMap contributors (ODbL)
 - Geospatial Information Authority of Japan (国土地理院)
+
+## License
+
+Source code: [MIT](LICENSE). Data derived from the sources above is subject to their own terms.

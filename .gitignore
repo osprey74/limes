@@ -1,3 +1,6 @@
+# Private planning notes (kept local only)
+*ハンドオフ*.md
+
 # Raw and generated data (fetched from JARTIC etc.; never commit)
 data-pipeline/data/
 *.csv

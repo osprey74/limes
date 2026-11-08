@@ -20,6 +20,10 @@ Limes は、走行中の道路の最高速度を公開データから推定し�
 
 ## データ出典
 
-- 「交通規制情報」（公益財団法人日本道路交通情報センター）（https://www.jartic.or.jp/service/opendata/）を加工して作成
+- 「交通規制情報」（公益財団法人日本道路交通情報センター）（<https://www.jartic.or.jp/service/opendata/>）を加工して作成
 - © OpenStreetMap contributors（ODbL）
 - 国土地理院
+
+## ライセンス
+
+ソースコードは [MIT](LICENSE) です。上記の出典に由来するデータは、それぞれの利用条件に従います。

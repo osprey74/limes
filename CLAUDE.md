@@ -32,7 +32,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 
 ## 出典表記（必須）
 
-JARTIC由来のデータ・レポートには「出典：『交通規制情報』（公益財団法人日本道路交通情報センター）（https://www.jartic.or.jp/service/opendata/）を加工して作成」を入れる。OSMはODbL帰属表示、国土地理院は出典明記。
+JARTIC由来のデータ・レポートには「出典：『交通規制情報』（公益財団法人日本道路交通情報センター）（<https://www.jartic.or.jp/service/opendata/>）を加工して作成」を入れる。OSMはODbL帰属表示、国土地理院は出典明記。
 
 ## コマンド
 
@@ -46,5 +46,6 @@ uv run python scripts/inspect_jartic.py data/raw/typeD_hokkaido.csv --meta data/
 
 ## 規約
 
+- リポジトリ直下の `Limes — 法定速度推定アプリ Claude Code向けハンドオフ.md` は非公開の計画書（収益モデル・費用試算を含む）。gitignore 済みで、コミットしない。参照はしてよいが、その内容を公開ファイルへ転記しない
 - ドキュメントは英日2言語（`README.md` / `README.ja.md`）。片方を更新したらもう片方も更新する
 - コミットメッセージは英語、Conventional Commits 形式
