@@ -1,4 +1,4 @@
-from limes_pipeline.mapillary_check import ReviewWay, pick_images, render_page, review_ways, sample_ways, summarize
+from limes_pipeline.mapillary_check import OtherRoads, ReviewWay, pick_images, render_page, review_ways, sample_ways, summarize
 from limes_pipeline.mesh_check import LocalProjection
 
 PROJ = LocalProjection(141.35, 43.09)
@@ -39,6 +39,8 @@ def test_render_page_skips_judged_ways():
     page = render_page(ways, "札幌", {"1": "center"})
     assert 'data-id="2"' in page and 'data-id="1"' not in page
     assert 'data-area="札幌"' in page
+    assert "map_action=map&amp;center=43.091000,141.350000&amp;zoom=20&amp;basemap=satellite" in page
+    assert "map_action=pano&amp;viewpoint=43.091000,141.350000&amp;heading=0" in page
 
 
 def image(id_, lon, lat, heading, pano=False):
@@ -54,8 +56,22 @@ def test_pick_images_prefers_along_road_and_drops_far_ones():
         image("far", 141.3510, 43.0910, 0),         # about 80 m off the road
     ]
     picked = [p["id"] for p in pick_images(way, candidates, PROJ)]
-    assert picked[0] == "along"
-    assert "far" not in picked
+    assert picked == ["along"]  # cross-looking and far images are dropped
+
+
+def test_pick_images_drops_images_taken_on_a_neighbouring_road():
+    way = ReviewWay("C", 1, "residential", "", "3m未満", 220, LINE)
+    # A motorway 12 m east of the way, running parallel.
+    osm = {"elements": [
+        {"type": "way", "id": 1, "geometry": [{"lon": c[0], "lat": c[1]} for c in LINE]},
+        {"type": "way", "id": 2, "geometry": [{"lon": 141.35015, "lat": 43.0900}, {"lon": 141.35015, "lat": 43.0920}]},
+    ]}
+    others = OtherRoads(osm, PROJ)
+    candidates = [
+        image("on_motorway", 141.35014, 43.0910, 0),
+        image("on_way", 141.35001, 43.0912, 0),
+    ]
+    assert [p["id"] for p in pick_images(way, candidates, PROJ, others)] == ["on_way"]
 
 
 def test_summarize_weights_by_length():

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import math
 import os
 import random
 import sys
@@ -29,6 +30,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+from shapely import STRtree
 from shapely.geometry import LineString, Point
 
 from .mesh_check import WIDE_CLASSES, LocalProjection, angle_between, bearing
@@ -40,6 +42,7 @@ SAMPLE_FRACTIONS = (0.2, 0.5, 0.8)
 SEARCH_HALF_DEG = 0.0004  # about 30 m east-west, 45 m north-south at 43°N
 MAX_DISTANCE_M = 20.0  # image position to way
 ALONG_ROAD_DEG = 35.0  # camera heading within this of the road bearing (either direction)
+NEAREST_MARGIN_M = 1.0  # image may be at most this much farther from the way than from any other road
 IMAGES_PER_WAY = 4
 VERDICTS = {"center": "中央線あり", "none": "中央線なし", "unclear": "判別不可"}
 GROUPS = {
@@ -119,29 +122,52 @@ def fetch_images(lon: float, lat: float, token: str, cache: Path) -> list[dict]:
     return data
 
 
-def pick_images(way: ReviewWay, candidates: list[dict], proj: LocalProjection) -> list[dict]:
-    """Nearest images per sample point, preferring cameras looking along the road."""
+class OtherRoads:
+    """All OSM highway ways of the area (service roads included), for the nearest-road check."""
+
+    def __init__(self, osm: dict, proj: LocalProjection):
+        self.ids, lines = [], []
+        for e in osm["elements"]:
+            if e["type"] == "way" and len(e.get("geometry", [])) >= 2:
+                self.ids.append(e["id"])
+                lines.append(LineString([proj(g["lon"], g["lat"]) for g in e["geometry"]]))
+        self.lines = lines
+        self.tree = STRtree(lines)
+
+    def nearest_distance(self, point: Point, exclude: int) -> float:
+        best = math.inf
+        for i in self.tree.query(point.buffer(MAX_DISTANCE_M + NEAREST_MARGIN_M)):
+            if self.ids[i] != exclude:
+                best = min(best, self.lines[i].distance(point))
+        return best
+
+
+def pick_images(way: ReviewWay, candidates: list[dict], proj: LocalProjection,
+                others: OtherRoads | None = None) -> list[dict]:
+    """Images taken on this way: no other road closer, and the camera looks along it unless 360°."""
     line_m = LineString([proj(*c) for c in way.line])
     road_bearing = bearing(line_m)
     scored = {}
     for img in candidates:
-        lon, lat = img["geometry"]["coordinates"]
-        distance = line_m.distance(Point(proj(lon, lat)))
+        point = Point(proj(*img["geometry"]["coordinates"]))
+        distance = line_m.distance(point)
         if distance > MAX_DISTANCE_M:
             continue
+        if others and distance > others.nearest_distance(point, way.osm_id) + NEAREST_MARGIN_M:
+            continue  # taken on a neighbouring road
         heading = img.get("computed_compass_angle", img.get("compass_angle"))
         along = (heading is not None and
                  min(angle_between(road_bearing, heading), angle_between(road_bearing, heading + 180)) <= ALONG_ROAD_DEG)
-        position = line_m.project(Point(proj(lon, lat))) / max(line_m.length, 1.0)
-        # Panoramas always show the road; otherwise the camera must face along it.
-        rank = (0 if along or img.get("is_pano") else 1, distance)
-        scored[img["id"]] = (rank, position, img)
+        if not (along or img.get("is_pano")):
+            continue
+        position = line_m.project(point) / max(line_m.length, 1.0)
+        scored[img["id"]] = (distance, position, img)
     chosen = []
     for fraction in SAMPLE_FRACTIONS:
         remaining = [s for s in scored.values() if s[2]["id"] not in {c["id"] for c in chosen}]
         if not remaining:
             break
-        best = min(remaining, key=lambda s: (s[0][0], abs(s[1] - fraction), s[0][1]))
+        best = min(remaining, key=lambda s: (abs(s[1] - fraction), s[0]))
         chosen.append(best[2])
     leftovers = sorted((s for s in scored.values() if s[2]["id"] not in {c["id"] for c in chosen}),
                        key=lambda s: s[0])
@@ -162,6 +188,7 @@ def collect(result_path: Path, token: str, work: Path, max_per_group: int = MAX_
     cache_dir = work / "mapillary"
     cache_dir.mkdir(parents=True, exist_ok=True)
     ways, population = sample_ways(review_ways(result, proj), max_per_group, seed)
+    others = OtherRoads(json.loads((work / "osm.json").read_text(encoding="utf-8")), proj)
     for i, way in enumerate(ways, 1):
         line = LineString(way.line)
         candidates = {}
@@ -170,7 +197,7 @@ def collect(result_path: Path, token: str, work: Path, max_per_group: int = MAX_
             cache = cache_dir / f"{pt.x:.5f}_{pt.y:.5f}.json"
             for img in fetch_images(pt.x, pt.y, token, cache):
                 candidates[img["id"]] = img
-        way.images = pick_images(way, list(candidates.values()), proj)
+        way.images = pick_images(way, list(candidates.values()), proj, others)
         print(f"[{i}/{len(ways)}] {way.group} way {way.osm_id}: {len(candidates)} nearby, {len(way.images)} picked")
     return ways, population
 
@@ -234,7 +261,10 @@ def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None 
     for way in sorted(ways, key=lambda w: (w.group, -w.length_m)):
         lon, lat = LineString(way.line).interpolate(0.5, normalized=True).coords[0]
         osm = f"https://www.openstreetmap.org/way/{way.osm_id}"
-        mly = f"https://www.mapillary.com/app/?lat={lat:.6f}&lng={lon:.6f}&z=18"
+        # Google Maps URLs (https://developers.google.com/maps/documentation/urls/get-started)
+        satellite = f"https://www.google.com/maps/@?api=1&map_action=map&center={lat:.6f},{lon:.6f}&zoom=20&basemap=satellite"
+        heading = bearing(LineString(LocalProjection(lon, lat)(*c) for c in way.line))
+        street = f"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={lat:.6f},{lon:.6f}&heading={heading:.0f}"
         if way.images:
             figures = "".join(
                 f'<figure><a href="{e(VIEWER_URL.format(id=img["id"]))}" target="_blank" rel="noopener">'
@@ -251,7 +281,8 @@ def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None 
             f'<section data-id="{way.osm_id}"><h2>要確認 {way.group}（{e(GROUPS[way.group])}）：{e(way.name or "（名称なし）")}</h2>'
             f'<div class="meta">{e(way.highway)}・地理院幅員 {e(way.width)}・{way.length_m:.0f} m・'
             f'<a href="{osm}" target="_blank" rel="noopener">OSM way {way.osm_id}</a>・'
-            f'<a href="{mly}" target="_blank" rel="noopener">Mapillary で周辺を見る</a></div>'
+            f'<a href="{e(satellite)}" target="_blank" rel="noopener">Google マップ（航空写真）</a>・'
+            f'<a href="{e(street)}" target="_blank" rel="noopener">ストリートビュー</a></div>'
             f'{body}<div class="verdict">{radios}</div></section>')
     return (
         '<!doctype html><html lang="ja"><head><meta charset="utf-8">'
