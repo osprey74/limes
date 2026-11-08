@@ -3,6 +3,7 @@
 //!   limes-cli decide [--at MMDD-hhmm-W[-H]] < evidence.ndjson > decisions.ndjson
 //!   limes-cli golden [cases.json]
 //!   limes-cli build-db --out pref.sqlite [--meta key=value]... < evidence.ndjson
+//!   limes-cli locate --db pref.sqlite lon,lat[,heading,speed_mps]...
 //!
 //! `decide` reads one WayEvidence JSON object per line and writes one line per
 //! way: {"osm_id", "decision", "time_dependent"}. `--at` sets the date and time
@@ -10,6 +11,7 @@
 //! weekday noon. `golden` runs decision cases and exits 1 on any failure.
 //! `build-db` decides every segment of the pipeline's evidence NDJSON and writes
 //! the prefecture database, then prints the length per stage and confidence.
+//! `locate` map-matches fixes against a database (one result line per fix).
 
 use std::io::{self, BufRead, BufWriter, Write};
 use std::process::ExitCode;
@@ -17,7 +19,8 @@ use std::process::ExitCode;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use limes_core::db::{SegmentRecord, Writer};
+use limes_core::db::{Reader, SegmentRecord, Writer};
+use limes_core::matcher::{Fix, Matcher};
 use limes_core::{DriveTime, Vehicle, WayEvidence, decide, golden};
 use serde::Serialize;
 
@@ -137,13 +140,73 @@ fn run_build_db(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn parse_fix(s: &str) -> Result<Fix, String> {
+    let v: Vec<f64> = s
+        .split(',')
+        .map(str::parse)
+        .collect::<Result<_, _>>()
+        .map_err(|_| format!("bad fix {s}"))?;
+    match v[..] {
+        [lon, lat] => Ok(Fix {
+            lon,
+            lat,
+            heading: None,
+            speed_mps: None,
+        }),
+        [lon, lat, heading, speed] => Ok(Fix {
+            lon,
+            lat,
+            heading: Some(heading),
+            speed_mps: Some(speed),
+        }),
+        _ => Err(format!("fix must be lon,lat[,heading,speed_mps]: {s}")),
+    }
+}
+
+fn run_locate(args: &[String]) -> Result<(), String> {
+    let [flag, db, fixes @ ..] = args else {
+        return Err(
+            "usage: limes-cli locate --db pref.sqlite lon,lat[,heading,speed_mps]...".into(),
+        );
+    };
+    if flag != "--db" {
+        return Err(
+            "usage: limes-cli locate --db pref.sqlite lon,lat[,heading,speed_mps]...".into(),
+        );
+    }
+    let reader = Reader::open(std::path::Path::new(db)).map_err(|e| e.to_string())?;
+    let mut matcher = Matcher::new();
+    for f in fixes {
+        let fix = parse_fix(f)?;
+        let started = std::time::Instant::now();
+        let found = matcher.locate(
+            &reader,
+            &fix,
+            &DriveTime::REPRESENTATIVE,
+            Vehicle::OrdinaryCar,
+        );
+        let micros = started.elapsed().as_micros();
+        let line = match found {
+            Some(m) => serde_json::json!({
+                "fix": f, "osm_id": m.segment.osm_id, "seq": m.segment.seq, "name": m.segment.name,
+                "ref": m.segment.ref_, "highway": m.segment.highway, "distance_m": (m.distance_m * 10.0).round() / 10.0,
+                "decision": m.decision, "micros": micros,
+            }),
+            None => serde_json::json!({"fix": f, "unknown": true, "micros": micros}),
+        };
+        println!("{line}");
+    }
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("decide") => run_decide(&args[1..]).map(|()| true),
         Some("golden") => run_golden(&args[1..]),
         Some("build-db") => run_build_db(&args[1..]).map(|()| true),
-        _ => Err("usage: limes-cli <decide|golden|build-db> ...".into()),
+        Some("locate") => run_locate(&args[1..]).map(|()| true),
+        _ => Err("usage: limes-cli <decide|golden|build-db|locate> ...".into()),
     };
     match result {
         Ok(true) => ExitCode::SUCCESS,

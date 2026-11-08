@@ -75,7 +75,9 @@ pub fn encode_coords(coords: &[[f64; 2]]) -> Vec<u8> {
 }
 
 pub fn decode_coords(blob: &[u8]) -> Vec<[f64; 2]> {
-    blob.as_chunks::<8>().0.iter()
+    blob.as_chunks::<8>()
+        .0
+        .iter()
         .map(|c| {
             let lon = i32::from_le_bytes(c[0..4].try_into().unwrap());
             let lat = i32::from_le_bytes(c[4..8].try_into().unwrap());
