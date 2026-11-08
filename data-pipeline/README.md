@@ -32,10 +32,11 @@ uv run python scripts/mesh_check.py --jartic data/raw/typeD_hokkaido.csv \
 
 ```sh
 # Street-level images for the ways mesh_check flags (needs a Mapillary client token, read scope)
-MAPILLARY_TOKEN=MLY|... uv run python scripts/mapillary_check.py collect --work data/mesh/16_58496_24055_6 \n  --area 札幌市北区 [--judged earlier-judgments.json]
+MAPILLARY_TOKEN=MLY|... uv run python scripts/mapillary_check.py collect --work data/mesh/16_58496_24055_6 \
+  --area 札幌市北区 [--judged earlier-judgments.json]
 # Open data/mesh/<area>/mapillary_review.html, judge each way, export judgments.json, then:
 uv run python scripts/mapillary_check.py summarize --work data/mesh/16_58496_24055_6 \
   --judgments judgments.json [more.json ...] --report ../docs/phase0/mapillary-sapporo-kita24.md
 ```
 
-Groups larger than `--max-per-group` (default 60) are randomly sampled; the report scales the sample to the whole group. The review page links signed, expiring Mapillary thumbnails (CC BY-SA) and stays local under `data/`.
+Groups larger than `--max-per-group` (default 60) are randomly sampled; the report gives each group's size so the sampled share can be applied to it. The review page links signed, expiring Mapillary thumbnails (CC BY-SA) and stays local under `data/`.
