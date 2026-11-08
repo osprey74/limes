@@ -50,6 +50,12 @@ pub enum RoadType {
     MotorRoad,
 }
 
+impl RoadType {
+    fn is_unknown(&self) -> bool {
+        *self == Self::Unknown
+    }
+}
+
 /// A maximum speed regulation (JARTIC 112 line / 113 variable line / 114 area) on the way.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpeedRegulation {
@@ -58,9 +64,9 @@ pub struct SpeedRegulation {
     /// JARTIC regulation code: 112, 113 or 114.
     pub code: u16,
     /// JARTIC unique key (NO.21), for tracing.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub key: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Conditions::is_empty")]
     pub conditions: Conditions,
 }
 
@@ -111,25 +117,26 @@ impl CenterEvidence {
 }
 
 /// Everything known about one OSM way. Static parts come from the pipeline.
+/// Defaults are left out when serialized, so most stored evidence is tiny.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WayEvidence {
     pub osm_id: i64,
     /// OSM highway=*
     pub highway: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "RoadType::is_unknown")]
     pub road_type: RoadType,
     /// OSM motorroad=yes
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub motorroad: bool,
     /// Paired with an opposite one-way carriageway (median), or physically separated.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub separated: bool,
     /// OSM lane_markings=no
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub no_lane_markings: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub regulations: Vec<SpeedRegulation>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub center: Vec<CenterEvidence>,
 }
 
@@ -183,6 +190,18 @@ const EXPRESSWAY: u16 = 100;
 /// Stage 8 (unknown) is not here: it means no way was matched, which the map
 /// matcher reports. Every way gets a speed; without evidence it falls back to 30
 /// with low confidence (decided 2026-11-08: lean to the safe side).
+impl WayEvidence {
+    /// Nothing beyond the OSM id and highway: decided by the highway tag alone.
+    pub fn is_bare(&self) -> bool {
+        *self
+            == WayEvidence {
+                osm_id: self.osm_id,
+                highway: self.highway.clone(),
+                ..Default::default()
+            }
+    }
+}
+
 pub fn decide(e: &WayEvidence, t: &DriveTime, vehicle: Vehicle) -> Decision {
     let applicable = e
         .regulations

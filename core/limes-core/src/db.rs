@@ -27,7 +27,7 @@ CREATE TABLE segments (
     ref TEXT NOT NULL,
     oneway INTEGER NOT NULL,      -- 1 along the geometry, -1 against it, 0 both ways
     geom BLOB NOT NULL,           -- (lon, lat) pairs as little-endian i32 in 1e-7 degrees
-    evidence TEXT NOT NULL,       -- WayEvidence JSON
+    evidence TEXT,                -- WayEvidence JSON; NULL when bare (only osm_id and highway)
     speed INTEGER NOT NULL,       -- decision at DriveTime::REPRESENTATIVE for an ordinary car
     confidence TEXT NOT NULL,
     stage INTEGER NOT NULL,
@@ -75,7 +75,7 @@ pub fn encode_coords(coords: &[[f64; 2]]) -> Vec<u8> {
 }
 
 pub fn decode_coords(blob: &[u8]) -> Vec<[f64; 2]> {
-    blob.chunks_exact(8)
+    blob.as_chunks::<8>().0.iter()
         .map(|c| {
             let lon = i32::from_le_bytes(c[0..4].try_into().unwrap());
             let lat = i32::from_le_bytes(c[4..8].try_into().unwrap());
@@ -215,7 +215,8 @@ impl Reader {
              WHERE i.max_lon >= ?1 AND i.min_lon <= ?3 AND i.max_lat >= ?2 AND i.min_lat <= ?4",
         )?;
         let rows = stmt.query_map(params![min_lon, min_lat, max_lon, max_lat], |r| {
-            let evidence: String = r.get(8)?;
+            let evidence: Option<String> = r.get(8)?;
+            let (osm_id, highway): (i64, String) = (r.get(1)?, r.get(3)?);
             let confidence: String = r.get(10)?;
             let stage: i32 = r.get(11)?;
             let bad = |col: usize, msg: String| {
@@ -227,14 +228,21 @@ impl Reader {
             };
             Ok(Segment {
                 id: r.get(0)?,
-                osm_id: r.get(1)?,
+                osm_id,
                 seq: r.get(2)?,
-                highway: r.get(3)?,
+                highway: highway.clone(),
                 name: r.get(4)?,
                 ref_: r.get(5)?,
                 oneway: r.get(6)?,
                 coords: decode_coords(&r.get::<_, Vec<u8>>(7)?),
-                evidence: serde_json::from_str(&evidence).map_err(|e| bad(8, e.to_string()))?,
+                evidence: match evidence {
+                    Some(json) => serde_json::from_str(&json).map_err(|e| bad(8, e.to_string()))?,
+                    None => WayEvidence {
+                        osm_id,
+                        highway: highway.clone(),
+                        ..Default::default()
+                    },
+                },
                 baked: Decision {
                     speed: r.get(9)?,
                     confidence: Confidence::parse(&confidence)

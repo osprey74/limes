@@ -15,23 +15,23 @@ use serde::{Deserialize, Serialize};
 /// One condition block as written in the CSV, in column order.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawBlock {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub period_start: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub period_end: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub time_start: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub time_end: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub weekday: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub vehicle_a: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub vehicle_b: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub vehicle_c: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub vehicle_d: String,
 }
 
@@ -229,16 +229,20 @@ impl RawBlock {
 /// Target and exclusion blocks of one regulation.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Conditions {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub targets: Vec<RawBlock>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclusions: Vec<RawBlock>,
     /// 規制条件 (NO.131), free text.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub note: String,
 }
 
 impl Conditions {
+    pub fn is_empty(&self) -> bool {
+        self.targets.is_empty() && self.exclusions.is_empty() && self.note.is_empty()
+    }
+
     /// Whether the regulation applies to `vehicle` at `t`.
     ///
     /// A target block naming only "その他" is taken to include the vehicle
