@@ -1,0 +1,96 @@
+[
+  {
+    "name": "regulated speed beats everything",
+    "evidence": {"osm_id": 1, "highway": "motorway", "road_type": "expressway",
+                 "regulations": [{"speed": 80, "code": 112}]},
+    "expect": {"speed": 80, "confidence": "high", "stage": "Regulated"}
+  },
+  {
+    "name": "lowest of overlapping regulations",
+    "evidence": {"osm_id": 2, "highway": "primary",
+                 "regulations": [{"speed": 50, "code": 112}, {"speed": 40, "code": 114}]},
+    "expect": {"speed": 40, "confidence": "high", "stage": "Regulated"}
+  },
+  {
+    "name": "truck-only regulation does not apply to cars",
+    "evidence": {"osm_id": 3, "highway": "primary", "center": ["jartic_center_line"],
+                 "regulations": [{"speed": 40, "code": 112,
+                                  "conditions": {"targets": [{"vehicle_c": "100000"}]}}]},
+    "expect": {"speed": 60, "confidence": "high", "stage": "CenterLine"}
+  },
+  {
+    "name": "school-zone hours: in force on a weekday morning",
+    "time": {"month": 6, "day": 10, "minute_of_day": 480, "weekday": 2, "holiday": false},
+    "evidence": {"osm_id": 4, "highway": "residential",
+                 "regulations": [{"speed": 20, "code": 112,
+                                  "conditions": {"targets": [{"time_start": "700", "time_end": "900"}],
+                                                 "exclusions": [{"weekday": "2"}]}}]},
+    "expect": {"speed": 20, "confidence": "high", "stage": "Regulated"}
+  },
+  {
+    "name": "school-zone hours: not in force on a holiday",
+    "time": {"month": 6, "day": 10, "minute_of_day": 480, "weekday": 2, "holiday": true},
+    "evidence": {"osm_id": 5, "highway": "residential",
+                 "regulations": [{"speed": 20, "code": 112,
+                                  "conditions": {"targets": [{"time_start": "700", "time_end": "900"}],
+                                                 "exclusions": [{"weekday": "2"}]}}]},
+    "expect": {"speed": 30, "confidence": "low", "stage": "NoEvidence"}
+  },
+  {
+    "name": "unclear vehicle (その他 only) applies",
+    "evidence": {"osm_id": 6, "highway": "secondary",
+                 "regulations": [{"speed": 50, "code": 112,
+                                  "conditions": {"targets": [{"vehicle_d": "100000000000000"}]}}]},
+    "expect": {"speed": 50, "confidence": "high", "stage": "Regulated"}
+  },
+  {
+    "name": "expressway by JARTIC road type",
+    "evidence": {"osm_id": 7, "highway": "trunk", "road_type": "expressway"},
+    "expect": {"speed": 100, "confidence": "high", "stage": "Expressway"}
+  },
+  {
+    "name": "expressway ramp is 60",
+    "evidence": {"osm_id": 8, "highway": "motorway_link"},
+    "expect": {"speed": 60, "confidence": "high", "stage": "Expressway"}
+  },
+  {
+    "name": "motor road",
+    "evidence": {"osm_id": 9, "highway": "trunk", "motorroad": true},
+    "expect": {"speed": 60, "confidence": "high", "stage": "MotorRoad"}
+  },
+  {
+    "name": "separated carriageways",
+    "evidence": {"osm_id": 10, "highway": "primary", "separated": true},
+    "expect": {"speed": 60, "confidence": "high", "stage": "Separated"}
+  },
+  {
+    "name": "no-overtaking marking doubles as center line",
+    "evidence": {"osm_id": 11, "highway": "residential", "center": ["jartic_no_overtaking"]},
+    "expect": {"speed": 60, "confidence": "high", "stage": "CenterLine"}
+  },
+  {
+    "name": "strongest center evidence wins",
+    "evidence": {"osm_id": 12, "highway": "tertiary", "center": ["aerial_photo", "jartic_lanes"]},
+    "expect": {"speed": 60, "confidence": "high", "stage": "CenterLine"}
+  },
+  {
+    "name": "aerial photo alone is mid",
+    "evidence": {"osm_id": 13, "highway": "unclassified", "center": ["aerial_photo"]},
+    "expect": {"speed": 60, "confidence": "mid", "stage": "CenterLine"}
+  },
+  {
+    "name": "farm track",
+    "evidence": {"osm_id": 14, "highway": "track"},
+    "expect": {"speed": 30, "confidence": "mid", "stage": "Track"}
+  },
+  {
+    "name": "lane_markings=no",
+    "evidence": {"osm_id": 15, "highway": "tertiary", "no_lane_markings": true},
+    "expect": {"speed": 30, "confidence": "mid", "stage": "NoEvidence"}
+  },
+  {
+    "name": "wide road without evidence still falls back to 30 low",
+    "evidence": {"osm_id": 16, "highway": "secondary"},
+    "expect": {"speed": 30, "confidence": "low", "stage": "NoEvidence"}
+  }
+]

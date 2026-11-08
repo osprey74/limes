@@ -6,7 +6,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 
 | パス | 内容 | 状態 |
 | --- | --- | --- |
-| `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | 未着手 |
+| `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・CLIまで） |
 | `ios/` | Swift / SwiftUI、MapLibre Native、StoreKit 2 | 未着手 |
 | `android/` | Kotlin / Jetpack Compose、MapLibre Native、Play Billing | 未着手 |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |
@@ -15,7 +15,9 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 ## 設計上の決定（要点）
 
 - 判定ロジックはRustの `limes-core` に一元化し、アプリ（UniFFI経由）とパイプライン（`limes-cli`）の両方から使う。Swift／Kotlin／Pythonで判定を再実装しない
-- 判定は上から順に評価：規制速度 → 高速自動車国道 → 自動車専用道路 → 中央分離帯 → 中央線・車両通行帯の証拠 → 農道等 → 生活道路(30) → 不明。速度と信頼度（high/mid/low）を必ずセットで出す
+- 判定は上から順に評価：規制速度 → 高速自動車国道 → 自動車専用道路 → 中央分離帯 → 中央線・車両通行帯の証拠 → 農道等 → 生活道路(30) → 不明。速度と信頼度（high/mid/low）を必ずセットで出す。実装は `core/limes-core/src/decide.rs`、期待値は `core/limes-core/tests/golden/decide.json`
+- 高速自動車国道は本線車道・加減速車線のみ100（施行令第27条）。ランプ（OSM `motorway_link`）は60（第11条第1号イ）
+- JARTICの規制条件は対象ブロック（NO.41-85）と除外ブロック（NO.86-130）の両方を評価する（`conditions.rs`）
 - 信頼度lowで60を表示しない。道路幅員だけを根拠に60と判定しない（幅員区分では中央線の有無を予測できない。`docs/phase0/findings.md` 6.3）
 - 中央線の証拠として、地理院航空写真からの自動検出を使う（60・mid）。証拠のない一般道路は安全側に倒して30（low）
 - 判定不能時は数値を出さず「不明」
@@ -39,6 +41,12 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 JARTIC由来のデータ・レポートには「出典：『交通規制情報』（公益財団法人日本道路交通情報センター）（<https://www.jartic.or.jp/service/opendata/>）を加工して作成」を入れる。OSMはODbL帰属表示、国土地理院は出典明記。
 
 ## コマンド
+
+```sh
+cd core
+cargo test
+cargo run -p limes-cli -- golden
+```
 
 ```sh
 cd data-pipeline
