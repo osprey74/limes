@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Data pipeline for Limes: JARTIC traffic regulation data, OSM and GSI road data"
 requires-python = ">=3.11"
 dependencies = [
+    "osmium>=4.3.2",
     "pillow>=13.0.0",
     "shapely>=2.2.0",
 ]

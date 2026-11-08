@@ -4,6 +4,7 @@
 //! the same way.
 
 pub mod conditions;
+pub mod db;
 pub mod decide;
 pub mod golden;
 

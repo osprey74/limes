@@ -21,6 +21,22 @@ pub enum Confidence {
     High,
 }
 
+impl Confidence {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Low => "low",
+            Self::Mid => "mid",
+            Self::High => "high",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        [Self::Low, Self::Mid, Self::High]
+            .into_iter()
+            .find(|c| c.as_str() == s)
+    }
+}
+
 /// JARTIC 道路種別コード (NO.32); often blank, then OSM decides.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -133,6 +149,21 @@ pub enum Stage {
     Track = 6,
     /// 7 生活道路（証拠なし）
     NoEvidence = 7,
+}
+
+impl Stage {
+    pub fn number(self) -> i32 {
+        self as i32
+    }
+
+    pub fn from_number(n: i32) -> Option<Self> {
+        use Stage::*;
+        [
+            Regulated, Expressway, MotorRoad, Separated, CenterLine, Track, NoEvidence,
+        ]
+        .into_iter()
+        .find(|s| s.number() == n)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

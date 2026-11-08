@@ -40,3 +40,19 @@ uv run python scripts/mapillary_check.py summarize --work data/mesh/16_58496_240
 ```
 
 Groups larger than `--max-per-group` (default 60) are randomly sampled; the report gives each group's size so the sampled share can be applied to it. The review page links signed, expiring Mapillary thumbnails (CC BY-SA) and stays local under `data/`.
+
+## Phase 1: prefecture database
+
+```sh
+# OSM extract (Geofabrik regions; Hokkaido is one prefecture)
+curl -L -o data/osm/hokkaido-latest.osm.pbf https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf
+# Evidence per road segment (<= 200 m), one JSON line each
+uv run python scripts/build_evidence.py --pbf data/osm/hokkaido-latest.osm.pbf \
+  --jartic data/raw/typeD_hokkaido.csv --out data/build/hokkaido.ndjson
+# Decide with limes-core and write the SQLite (R*Tree) the apps read
+(cd ../core && cargo build --release -p limes-cli)
+../core/target/release/limes-cli build-db --out data/build/hokkaido.sqlite \
+  --meta prefecture=hokkaido < data/build/hokkaido.ndjson
+```
+
+`--bbox west,south,east,north` limits `build_evidence` to a test area.
