@@ -46,6 +46,7 @@ def test_summarize_weights_by_length():
         {"group": "A", "osm_id": 2, "length_m": 100, "images": [{}]},
         {"group": "A", "osm_id": 3, "length_m": 50, "images": []},
     ]
-    report = summarize(ways, {"1": "center", "2": "none"})
-    assert "| A | 中央線ありの割合（判定できた延長に対して） | | 75% |" in report
-    assert "| A | 画像なし | 1 | 0.1 |" in report
+    report = summarize(ways, {"1": "center", "2": "none", "3": "center"})
+    assert "| A | 路面画像 | 1 本 / 0.3 km | 1 本 / 0.1 km | — | — | 75% |" in report
+    assert "| A | 衛星写真 | 1 本 / 0.1 km | — | — | — | 100% |" in report
+    assert "| A | 計 | 2 本 / 0.3 km | 1 本 / 0.1 km | — | — | 78% |" in report

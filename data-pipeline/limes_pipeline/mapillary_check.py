@@ -241,26 +241,26 @@ def render_page(ways: list[ReviewWay]) -> str:
 
 # --- summary ------------------------------------------------------------------
 
+def _cell(members: list[dict]) -> str:
+    return f"{len(members)} 本 / {sum(w['length_m'] for w in members) / 1000:.1f} km" if members else "—"
+
+
 def summarize(ways: list[dict], judgments: dict[str, str]) -> str:
+    """Ways without Mapillary images were judged on the satellite basemap instead."""
+    keys = [*VERDICTS, "pending"]
+    labels = {**VERDICTS, "pending": "未判定"}
     out = ["# Phase 0 要確認道路の路面画像確認", "",
-           "| 区分 | 判定 | way 数 | 延長 km |", "| --- | --- | ---: | ---: |"]
+           "| 区分 | 判定材料 | " + " | ".join(labels[k] for k in keys) + " | 中央線ありの割合（延長） |",
+           "| --- | --- | " + " | ".join("---:" for _ in keys) + " | ---: |"]
     for group in ("A", "B"):
         members = [w for w in ways if w["group"] == group]
-        total = sum(w["length_m"] for w in members)
-        buckets: dict[str, list[dict]] = {}
-        for w in members:
-            key = judgments.get(str(w["osm_id"])) or ("no_image" if not w["images"] else "pending")
-            buckets.setdefault(key, []).append(w)
-        labels = {**VERDICTS, "no_image": "画像なし", "pending": "未判定"}
-        for key in [*VERDICTS, "no_image", "pending"]:
-            if key in buckets:
-                length = sum(w["length_m"] for w in buckets[key])
-                out.append(f"| {group} | {labels[key]} | {len(buckets[key])} | {length / 1000:.1f} |")
-        judged = sum(w["length_m"] for k in ("center", "none") for w in buckets.get(k, []))
-        if judged:
-            share = sum(w["length_m"] for w in buckets.get("center", [])) / judged
-            out.append(f"| {group} | 中央線ありの割合（判定できた延長に対して） | | {share:.0%} |")
-        out.append(f"| {group} | 計 | {len(members)} | {total / 1000:.1f} |")
+        for source, subset in (("路面画像", [w for w in members if w["images"]]),
+                               ("衛星写真", [w for w in members if not w["images"]]),
+                               ("計", members)):
+            buckets = {k: [w for w in subset if judgments.get(str(w["osm_id"]), "pending") == k] for k in keys}
+            judged = sum(w["length_m"] for k in ("center", "none") for w in buckets[k])
+            share = f"{sum(w['length_m'] for w in buckets['center']) / judged:.0%}" if judged else "—"
+            out.append(f"| {group} | {source} | " + " | ".join(_cell(buckets[k]) for k in keys) + f" | {share} |")
     out += ["", "画像：Mapillary（CC BY-SA 4.0）。地図データ：© OpenStreetMap contributors（ODbL）。", ""]
     return "\n".join(out)
 
