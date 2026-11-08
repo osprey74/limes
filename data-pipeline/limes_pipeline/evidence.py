@@ -7,6 +7,8 @@ WayEvidence (regulations with their raw condition blocks, center-line evidence,
 road type, separation). No decision is made here; `limes-cli build-db` does it.
 
 Matching rules carried over from Phase 0 (docs/phase0/findings.md):
+- ways are cut where a JARTIC line starts or ends (or crosses a 114 area's edge),
+  so one OSM way can carry different speeds along its length
 - a JARTIC line belongs to a segment when its ±MATCH_BUFFER_M buffer covers at
   least MATCH_COVERAGE of the segment; a 114 area when it contains the
   segment's midpoint (minus the excluded parts, NO.30)
@@ -46,6 +48,7 @@ from .mesh_check import (
 
 ROAD_HIGHWAYS = CAR_HIGHWAYS | {"service"}
 SEGMENT_M = 200.0
+MIN_PIECE_M = 10.0  # cut points closer than this to each other or to an end are dropped
 TILE_ZOOM = 10  # about 30 km tiles; each gets its own local projection
 SPEED_CODES = {"112", "113", "114"}
 CENTER_CODES = {"15": "jartic_center_line", "20": "jartic_lanes", "17": "jartic_no_overtaking"}
@@ -163,13 +166,20 @@ def tile_of(lon: float, lat: float, z: int = TILE_ZOOM) -> tuple[int, int]:
     return x, y
 
 
-def split(line: LineString, max_len: float = SEGMENT_M) -> list[LineString]:
-    """Equal pieces no longer than max_len (projected meters)."""
-    pieces = max(1, math.ceil(line.length / max_len))
-    if pieces == 1:
-        return [line]
-    step = line.length / pieces
-    return [substring(line, i * step, (i + 1) * step) for i in range(pieces)]
+def split(line: LineString, max_len: float = SEGMENT_M, cuts: list[float] | None = None) -> list[LineString]:
+    """Cut at the given distances along the line (where a regulation starts or ends),
+    then split each part into equal pieces no longer than max_len (projected meters)."""
+    stops = [0.0]
+    for d in sorted(cuts or []):
+        if MIN_PIECE_M <= d <= line.length - MIN_PIECE_M and d - stops[-1] >= MIN_PIECE_M:
+            stops.append(d)
+    stops.append(line.length)
+    pieces = []
+    for start, end in zip(stops, stops[1:]):
+        n = max(1, math.ceil((end - start) / max_len))
+        step = (end - start) / n
+        pieces += [substring(line, start + i * step, start + (i + 1) * step) for i in range(n)]
+    return pieces
 
 
 class Matcher:
@@ -193,6 +203,29 @@ class Matcher:
         self.oneway_major = [w for w in ways if w.highway in MAJOR_HIGHWAYS and w.tags.get("oneway") in ONEWAY]
         self.oneway_lines = [LineString(w.coords) for w in self.oneway_major]
         self.oneway_tree = STRtree(self.oneway_lines)
+
+    def cuts(self, line_ll: LineString, line: LineString, proj: LocalProjection) -> list[float]:
+        """Distances along the way where a speed or center-line regulation begins or ends."""
+        def m(lon, lat):
+            return Point(proj(lon, lat))
+
+        margin = (MATCH_BUFFER_M + 5) / 111_000 * 2
+        search = box(*line_ll.bounds).buffer(margin)
+        cuts = []
+        for j in self.line_tree.query(search):
+            ends = self.lines[j].coords
+            for end in (ends[0], ends[-1]):
+                point = m(*end)
+                if line.distance(point) <= MATCH_BUFFER_M:
+                    cuts.append(line.project(point))
+        for j in self.area_tree.query(search):
+            if self.regulations[self.area_owner[j]].code not in SPEED_CODES:
+                continue
+            crossing = line_ll.intersection(self.areas[j].boundary)
+            for point in getattr(crossing, "geoms", [crossing]):
+                if isinstance(point, Point):
+                    cuts.append(line.project(m(point.x, point.y)))
+        return cuts
 
     def evidence(self, way: Way, piece: LineString, piece_ll: LineString, proj: LocalProjection) -> dict:
         def to_m(geom):
@@ -269,7 +302,8 @@ def segments(ways: list[Way], matcher: Matcher) -> Iterator[dict]:
             line = LineString([proj(*c) for c in w.coords])
             if line.length == 0:
                 continue
-            for seq, piece in enumerate(split(line)):
+            cuts = matcher.cuts(LineString(w.coords), line, proj)
+            for seq, piece in enumerate(split(line, cuts=cuts)):
                 piece_ll = LineString([proj.inverse(x, y) for x, y in piece.coords])
                 yield {
                     "osm_id": w.osm_id,

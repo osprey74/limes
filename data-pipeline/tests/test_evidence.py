@@ -22,13 +22,18 @@ def test_split_into_equal_pieces():
     assert len(split(LineString([(0, 0), (200, 0)]))) == 1
 
 
-def test_way_is_split_and_regulation_matched_per_piece():
-    # 50 km/h along the southern half only (offset 5 m east).
-    half = [(141.35006, 43.0900), (141.35006, 43.0920)]
-    out = run([regulation("112", 50, lines=[half])], [Way(1, "secondary", {}, ROAD)])
-    assert [s["seq"] for s in out] == [0, 1, 2]
+def test_split_at_cut_points_first():
+    pieces = split(LineString([(0, 0), (450, 0)]), cuts=[100, 105, 445])
+    assert [round(p.length) for p in pieces] == [100, 175, 175]  # 105 and 445 are too close
+
+
+def test_way_is_cut_where_a_regulation_ends():
+    # 50 km/h on the southern 130 m only (offset 5 m east).
+    part = [(141.35006, 43.0900), (141.35006, 43.0912)]
+    out = run([regulation("112", 50, lines=[part])], [Way(1, "secondary", {}, ROAD)])
     assert out[0]["regulations"][0]["speed"] == 50
-    assert out[2]["regulations"] == []
+    assert 120 < out[0]["length_m"] < 140
+    assert all(s["regulations"] == [] for s in out[1:])
     assert out[0]["coords"][0] == [141.35, 43.09]
 
 
@@ -46,6 +51,10 @@ def test_zone_area_contains_midpoint_and_road_type_is_carried():
     zone = Polygon([(141.349, 43.089), (141.351, 43.089), (141.351, 43.095), (141.349, 43.095)])
     out = run([regulation("114", 30, area=zone)], [Way(1, "residential", {}, ROAD)])
     assert all(s["regulations"][0]["code"] == 114 for s in out)
+    half_zone = Polygon([(141.349, 43.089), (141.351, 43.089), (141.351, 43.092), (141.349, 43.092)])
+    out = run([regulation("114", 30, area=half_zone)], [Way(1, "residential", {}, ROAD)])
+    inside = [s for s in out if s["regulations"]]
+    assert 210 < sum(s["length_m"] for s in inside) < 235  # the zone edge is ~222 m north
     out = run([regulation("112", 80, lines=[ROAD], road_type="expressway")], [Way(1, "trunk", {}, ROAD)])
     assert out[0]["road_type"] == "expressway"
 
