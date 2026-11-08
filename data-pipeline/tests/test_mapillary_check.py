@@ -84,6 +84,6 @@ def test_summarize_weights_by_length():
     report = summarize(ways, population, {"1": "center", "2": "none", "3": "center"}, "札幌")
     assert "| A 30（low）・地理院幅員 5.5 m 以上 | 3 本 / 0.5 km | 3 本 |" in report
     assert "| C 30（low）・地理院幅員 5.5 m 未満 | 10 本 / 0.9 km | 0 本（無作為抽出） |" in report
-    assert "| A | 路面画像 | 1 本 / 0.3 km | 1 本 / 0.1 km | — | — | 75% |" in report
-    assert "| A | 衛星写真 | 1 本 / 0.1 km | — | — | — | 100% |" in report
-    assert "| A | 計 | 2 本 / 0.3 km | 1 本 / 0.1 km | — | — | 78% |" in report
+    assert "| A | 路面画像あり | 1 本 / 0.3 km | — | 1 本 / 0.1 km | — | — | 75% |" in report
+    assert "| A | 航空写真のみ | 1 本 / 0.1 km | — | — | — | — | 100% |" in report
+    assert "| A | 計 | 2 本 / 0.3 km | — | 1 本 / 0.1 km | — | — | 78% |" in report

@@ -33,6 +33,7 @@ from pathlib import Path
 from shapely import STRtree
 from shapely.geometry import LineString, Point
 
+from . import aerial
 from .mesh_check import WIDE_CLASSES, LocalProjection, angle_between, bearing
 
 GRAPH_URL = "https://graph.mapillary.com/images"
@@ -44,7 +45,7 @@ MAX_DISTANCE_M = 20.0  # image position to way
 ALONG_ROAD_DEG = 35.0  # camera heading within this of the road bearing (either direction)
 NEAREST_MARGIN_M = 1.0  # image may be at most this much farther from the way than from any other road
 IMAGES_PER_WAY = 4
-VERDICTS = {"center": "中央線あり", "none": "中央線なし", "unclear": "判別不可"}
+VERDICTS = {"center": "中央線あり", "lanes": "車線境界線のみ（一方通行）", "none": "中央線なし", "unclear": "判別不可"}
 GROUPS = {
     "A": "30（low）・地理院幅員 5.5 m 以上",
     "B": "不明",
@@ -63,6 +64,8 @@ class ReviewWay:
     length_m: float
     line: list[tuple[float, float]]
     images: list[dict] = field(default_factory=list)
+    oneway: str = ""
+    lanes: str = ""
 
 
 def review_ways(result: dict, proj: LocalProjection) -> list[ReviewWay]:
@@ -188,8 +191,14 @@ def collect(result_path: Path, token: str, work: Path, max_per_group: int = MAX_
     cache_dir = work / "mapillary"
     cache_dir.mkdir(parents=True, exist_ok=True)
     ways, population = sample_ways(review_ways(result, proj), max_per_group, seed)
-    others = OtherRoads(json.loads((work / "osm.json").read_text(encoding="utf-8")), proj)
+    osm = json.loads((work / "osm.json").read_text(encoding="utf-8"))
+    others = OtherRoads(osm, proj)
+    tags = {e["id"]: e.get("tags", {}) for e in osm["elements"]}
+    aerial_dir = work / "aerial"
+    aerial_dir.mkdir(exist_ok=True)
     for i, way in enumerate(ways, 1):
+        way.oneway = tags.get(way.osm_id, {}).get("oneway", "")
+        way.lanes = tags.get(way.osm_id, {}).get("lanes", "")
         line = LineString(way.line)
         candidates = {}
         for fraction in SAMPLE_FRACTIONS:
@@ -198,6 +207,8 @@ def collect(result_path: Path, token: str, work: Path, max_per_group: int = MAX_
             for img in fetch_images(pt.x, pt.y, token, cache):
                 candidates[img["id"]] = img
         way.images = pick_images(way, list(candidates.values()), proj, others)
+        midpoint = line.interpolate(0.5, normalized=True).coords[0]
+        aerial.crop(way.line, midpoint, work.parent.parent / "gsi_photo").save(aerial_dir / f"{way.osm_id}.jpg", quality=88)
         print(f"[{i}/{len(ways)}] {way.group} way {way.osm_id}: {len(candidates)} nearby, {len(way.images)} picked")
     return ways, population
 
@@ -215,6 +226,7 @@ h2 { font-size:16px; margin:0 0 4px; }
 .imgs { display:flex; gap:8px; overflow-x:auto; }
 .imgs figure { margin:0; flex:0 0 auto; }
 .imgs img { height:240px; border-radius:4px; display:block; }
+.aerial { width:100%; max-width:1544px; display:block; margin-bottom:8px; }
 figcaption { font-size:12px; color:var(--muted); }
 .verdict label { margin-right:16px; cursor:pointer; }
 button { padding:6px 14px; }
@@ -265,21 +277,23 @@ def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None 
         satellite = f"https://www.google.com/maps/@?api=1&map_action=map&center={lat:.6f},{lon:.6f}&zoom=20&basemap=satellite"
         heading = bearing(LineString(LocalProjection(lon, lat)(*c) for c in way.line))
         street = f"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={lat:.6f},{lon:.6f}&heading={heading:.0f}"
+        photo = f'<img class="aerial" src="aerial/{way.osm_id}.jpg" loading="lazy" alt="航空写真 way {way.osm_id}">'
         if way.images:
             figures = "".join(
                 f'<figure><a href="{e(VIEWER_URL.format(id=img["id"]))}" target="_blank" rel="noopener">'
                 f'<img src="{e(img["url"] or "")}" loading="lazy" alt="Mapillary {e(img["id"])}"></a>'
                 f'<figcaption>{e(img["captured"])}{" ・360°" if img["pano"] else ""}</figcaption></figure>'
                 for img in way.images)
-            body = f'<div class="imgs">{figures}</div>'
+            body = f'{photo}<div class="imgs">{figures}</div>'
         else:
-            body = '<p class="none">近くに画像がありません。</p>'
+            body = f'{photo}<p class="none">近くに路面画像がありません。</p>'
         radios = "".join(
             f'<label><input type="radio" name="v{way.osm_id}" value="{key}"> {label}</label>'
             for key, label in VERDICTS.items())
         sections.append(
             f'<section data-id="{way.osm_id}"><h2>要確認 {way.group}（{e(GROUPS[way.group])}）：{e(way.name or "（名称なし）")}</h2>'
-            f'<div class="meta">{e(way.highway)}・地理院幅員 {e(way.width)}・{way.length_m:.0f} m・'
+            f'<div class="meta">{e(way.highway)}{"・一方通行" if way.oneway in ("yes", "-1") else ""}'
+            f'{f"・車線数 {e(way.lanes)}" if way.lanes else ""}・地理院幅員 {e(way.width)}・{way.length_m:.0f} m・'
             f'<a href="{osm}" target="_blank" rel="noopener">OSM way {way.osm_id}</a>・'
             f'<a href="{e(satellite)}" target="_blank" rel="noopener">Google マップ（航空写真）</a>・'
             f'<a href="{e(street)}" target="_blank" rel="noopener">ストリートビュー</a></div>'
@@ -291,7 +305,9 @@ def render_page(ways: list[ReviewWay], area: str, judged: dict[str, str] | None 
         f'<header><strong>Limes 要確認道路の路面画像確認（{e(area)}）</strong>　<span id="progress"></span>　'
         '<button id="export">判定を書き出す（judgments.json）</button></header>'
         f'{"".join(sections)}'
-        '<p class="meta">画像：Mapillary（CC BY-SA 4.0、撮影者に帰属）。地図データ：© OpenStreetMap contributors。</p>'
+        '<p class="meta">左：航空写真、右：同じ写真に OSM の道路を描き込んだもの（丸は中間地点）。'
+        f'{aerial.ATTRIBUTION}（https://maps.gsi.go.jp/development/ichiran.html）。'
+        '画像：Mapillary（CC BY-SA 4.0、撮影者に帰属）。地図データ：© OpenStreetMap contributors。</p>'
         f'<script>{PAGE_SCRIPT}</script></body></html>')
 
 
@@ -302,7 +318,7 @@ def _cell(members: list[dict]) -> str:
 
 
 def summarize(ways: list[dict], population: dict, judgments: dict[str, str], area: str) -> str:
-    """Ways without Mapillary images were judged on the satellite basemap instead."""
+    """Every way has a GSI aerial crop; some also have Mapillary street-level images."""
     keys = [*VERDICTS, "pending"]
     labels = {**VERDICTS, "pending": "未判定"}
     out = [f"# Phase 0 要確認道路の路面画像確認（{area}）", "",
@@ -318,15 +334,16 @@ def summarize(ways: list[dict], population: dict, judgments: dict[str, str], are
         members = [w for w in ways if w["group"] == group]
         if not members:
             continue
-        for source, subset in (("路面画像", [w for w in members if w["images"]]),
-                               ("衛星写真", [w for w in members if not w["images"]]),
+        for source, subset in (("路面画像あり", [w for w in members if w["images"]]),
+                               ("航空写真のみ", [w for w in members if not w["images"]]),
                                ("計", members)):
             buckets = {k: [w for w in subset if judgments.get(str(w["osm_id"]), "pending") == k] for k in keys}
-            judged = sum(w["length_m"] for k in ("center", "none") for w in buckets[k])
+            judged = sum(w["length_m"] for k in ("center", "lanes", "none") for w in buckets[k])
             share = f"{sum(w['length_m'] for w in buckets['center']) / judged:.0%}" if judged else "—"
             out.append(f"| {group} | {source} | " + " | ".join(_cell(buckets[k]) for k in keys) + f" | {share} |")
-    out += ["", "割合は判定できた（あり／なし）延長に対する値。抽出した区分は、この割合を区分全体の延長に当てはめて推定する。"]
-    out += ["", "画像：Mapillary（CC BY-SA 4.0）。地図データ：© OpenStreetMap contributors（ODbL）。", ""]
+    out += ["", "割合は判定できた（中央線あり／車線境界線のみ／なし）延長に対する値。抽出した区分は、この割合を区分全体の延長に当てはめて推定する。"]
+    out += ["", f"{aerial.ATTRIBUTION}（<https://maps.gsi.go.jp/development/ichiran.html>）。"
+            "画像：Mapillary（CC BY-SA 4.0）。地図データ：© OpenStreetMap contributors（ODbL）。", ""]
     return "\n".join(out)
 
 
