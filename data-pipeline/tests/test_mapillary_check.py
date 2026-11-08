@@ -1,4 +1,4 @@
-from limes_pipeline.mapillary_check import ReviewWay, pick_images, review_ways, summarize
+from limes_pipeline.mapillary_check import ReviewWay, pick_images, render_page, review_ways, sample_ways, summarize
 from limes_pipeline.mesh_check import LocalProjection
 
 PROJ = LocalProjection(141.35, 43.09)
@@ -19,8 +19,26 @@ def test_review_ways_selects_groups():
         feature(4, 60, "high", "5.5m-13m未満"),
     ]}
     ways = review_ways(result, PROJ)
-    assert [(w.group, w.osm_id) for w in ways] == [("A", 1), ("B", 3)]
+    assert [(w.group, w.osm_id) for w in ways] == [("A", 1), ("C", 2), ("B", 3)]
     assert 200 < ways[0].length_m < 240
+
+
+def test_sample_ways_caps_each_group_and_keeps_population():
+    ways = [ReviewWay("C", i, "residential", "", "3m-5.5m未満", 100.0, LINE) for i in range(10)]
+    ways.append(ReviewWay("A", 99, "residential", "", "5.5m-13m未満", 50.0, LINE))
+    sampled, population = sample_ways(ways, 4, seed=1)
+    assert sum(w.group == "C" for w in sampled) == 4
+    assert sum(w.group == "A" for w in sampled) == 1
+    assert population["C"] == {"ways": 10, "length_m": 1000.0}
+    assert population["B"] == {"ways": 0, "length_m": 0}
+
+
+def test_render_page_skips_judged_ways():
+    ways = [ReviewWay("A", 1, "residential", "", "5.5m-13m未満", 100, LINE),
+            ReviewWay("C", 2, "residential", "", "3m未満", 100, LINE)]
+    page = render_page(ways, "札幌", {"1": "center"})
+    assert 'data-id="2"' in page and 'data-id="1"' not in page
+    assert 'data-area="札幌"' in page
 
 
 def image(id_, lon, lat, heading, pano=False):
@@ -46,7 +64,10 @@ def test_summarize_weights_by_length():
         {"group": "A", "osm_id": 2, "length_m": 100, "images": [{}]},
         {"group": "A", "osm_id": 3, "length_m": 50, "images": []},
     ]
-    report = summarize(ways, {"1": "center", "2": "none", "3": "center"})
+    population = {"A": {"ways": 3, "length_m": 450}, "C": {"ways": 10, "length_m": 900}}
+    report = summarize(ways, population, {"1": "center", "2": "none", "3": "center"}, "札幌")
+    assert "| A 30（low）・地理院幅員 5.5 m 以上 | 3 本 / 0.5 km | 3 本 |" in report
+    assert "| C 30（low）・地理院幅員 5.5 m 未満 | 10 本 / 0.9 km | 0 本（無作為抽出） |" in report
     assert "| A | 路面画像 | 1 本 / 0.3 km | 1 本 / 0.1 km | — | — | 75% |" in report
     assert "| A | 衛星写真 | 1 本 / 0.1 km | — | — | — | 100% |" in report
     assert "| A | 計 | 2 本 / 0.3 km | 1 本 / 0.1 km | — | — | 78% |" in report
