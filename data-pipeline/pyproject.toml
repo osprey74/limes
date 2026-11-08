@@ -1,0 +1,19 @@
+[project]
+name = "limes-pipeline"
+version = "0.1.0"
+description = "Data pipeline for Limes: JARTIC traffic regulation data, OSM and GSI road data"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["limes_pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

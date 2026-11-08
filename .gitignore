@@ -1,0 +1,34 @@
+# Raw and generated data (fetched from JARTIC etc.; never commit)
+data-pipeline/data/
+*.csv
+*.zip
+*.sqlite
+*.zst
+*.pmtiles
+*.mbtiles
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Rust
+target/
+
+# iOS
+ios/**/xcuserdata/
+ios/**/DerivedData/
+*.xcframework
+
+# Android
+android/**/build/
+android/.gradle/
+android/local.properties
+*.so
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
