@@ -9,7 +9,8 @@
 //! `decide` reads one WayEvidence JSON object per line and writes one line per
 //! way: {"osm_id", "decision", "time_dependent"}. `--at` sets the date and time
 //! (W: 0 = Monday ... 6 = Sunday, trailing -H for a holiday); the default is a
-//! weekday noon. `golden` runs decision cases and exits 1 on any failure.
+//! weekday noon. `golden` runs decision cases, prints the count and exits 1 on
+//! any failure.
 //! `build-db` decides every segment of the pipeline's evidence NDJSON and writes
 //! the prefecture database, then prints the length per stage and confidence.
 //! `locate` map-matches fixes against a database (one result line per fix).
@@ -99,6 +100,8 @@ fn run_golden(args: &[String]) -> Result<bool, String> {
     for f in &failures {
         eprintln!("FAIL {f}");
     }
+    let cases = serde_json::from_str::<Vec<serde_json::Value>>(&json).map_or(0, |c| c.len());
+    eprintln!("{cases} cases, {} failed", failures.len());
     Ok(failures.is_empty())
 }
 

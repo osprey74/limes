@@ -52,11 +52,29 @@ uv run python scripts/build_evidence.py --pbf data/osm/hokkaido-latest.osm.pbf \
 # Decide with limes-core and write the SQLite (R*Tree) the apps read
 (cd ../core && cargo build --release -p limes-cli)
 ../core/target/release/limes-cli build-db --out data/build/hokkaido.sqlite \
-  --meta prefecture=hokkaido --meta version=2026-09.20261109   --meta jartic_month=2026-09 --meta osm_date=2026-11-08 < data/build/hokkaido.ndjson
+  --meta prefecture=hokkaido --meta version=2026-09.20261109 \
+  --meta jartic_month=2026-09 --meta osm_date=2026-11-08 < data/build/hokkaido.ndjson
+# Validation gate: exits 1 when the build must not be published
+uv run python scripts/gate.py hokkaido --csv data/raw/typeD_hokkaido.csv \
+  --db data/build/hokkaido.sqlite --release-meta data/raw/typeD_hokkaido.meta.json \
+  --previous data/published/stats/hokkaido.json --limes-cli ../core/target/release/limes-cli \
+  --stats-out data/dist/stats/hokkaido.json --report data/build/hokkaido.gate.md
 # Compress for publishing and add the entry to data/dist/manifest.json
 ../core/target/release/limes-cli package --db data/build/hokkaido.sqlite --out-dir data/dist
 ```
 
 `--bbox west,south,east,north` limits `build_evidence` to a test area.
+
+The gate fails the build when any of these does not hold (thresholds in `limes_pipeline/gate.py`; provisional until a few monthly releases have been compared):
+
+| Check | Condition |
+| --- | --- |
+| JARTIC format | 170 header columns, no short rows, every row version `k_2.1`, no undecodable bytes, no duplicate unique keys (all 47 prefectures met these in the 2026-09 release) |
+| Speed regulations | At least one 112 row; missing, unparsable, out-of-Japan or one-point coordinates in at most 1% of them |
+| Database | Meta `prefecture` matches, `version` is set, `jartic_month` equals the release's target month; at least one segment |
+| Month over month | JARTIC rows, codes 112/114/15/17/20, segments and stage-1 segments each within ±10% of the last published build (±20 for small counts); skipped on the first build |
+| Decisions | `limes-cli golden` passes |
+
+The stats written by `--stats-out` are published with the build and become `--previous` for the next one.
 
 `version` (`[A-Za-z0-9._-]`) names the build; the app downloads a prefecture again when the manifest's version differs from the one it holds. `package` writes `<prefecture>-<version>.sqlite.zst` (zstd level 19 by default; Hokkaido 208 MB -> 44 MB) with its size, sha256 and decompressed size in the manifest. Upload the `.zst` files first and `manifest.json` last.
