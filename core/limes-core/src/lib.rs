@@ -8,6 +8,7 @@ pub mod db;
 pub mod decide;
 pub mod golden;
 pub mod matcher;
+pub mod update;
 
 pub use conditions::{Conditions, DriveTime, RawBlock, Vehicle};
 pub use decide::{

@@ -6,7 +6,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 
 | パス | 内容 | 状態 |
 | --- | --- | --- |
-| `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFIまで） |
+| `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFI・更新管理まで） |
 | `ios/` | Swift / SwiftUI、MapLibre Native、StoreKit 2 | 未着手 |
 | `android/` | Kotlin / Jetpack Compose、MapLibre Native、Play Billing | 未着手 |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |

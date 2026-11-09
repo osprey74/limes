@@ -52,7 +52,11 @@ uv run python scripts/build_evidence.py --pbf data/osm/hokkaido-latest.osm.pbf \
 # Decide with limes-core and write the SQLite (R*Tree) the apps read
 (cd ../core && cargo build --release -p limes-cli)
 ../core/target/release/limes-cli build-db --out data/build/hokkaido.sqlite \
-  --meta prefecture=hokkaido < data/build/hokkaido.ndjson
+  --meta prefecture=hokkaido --meta version=2026-09.20261109   --meta jartic_month=2026-09 --meta osm_date=2026-11-08 < data/build/hokkaido.ndjson
+# Compress for publishing and add the entry to data/dist/manifest.json
+../core/target/release/limes-cli package --db data/build/hokkaido.sqlite --out-dir data/dist
 ```
 
 `--bbox west,south,east,north` limits `build_evidence` to a test area.
+
+`version` (`[A-Za-z0-9._-]`) names the build; the app downloads a prefecture again when the manifest's version differs from the one it holds. `package` writes `<prefecture>-<version>.sqlite.zst` (zstd level 19 by default; Hokkaido 208 MB -> 44 MB) with its size, sha256 and decompressed size in the manifest. Upload the `.zst` files first and `manifest.json` last.

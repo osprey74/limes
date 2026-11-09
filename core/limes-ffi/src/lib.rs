@@ -3,12 +3,17 @@
 //! The app opens the prefecture databases it has downloaded, then calls
 //! `locate` for every GPS fix with the local time. Everything else (decision,
 //! map matching, conditions) stays in limes-core.
+//!
+//! Updates: `open_store` once at launch, `plan_updates` with the fetched
+//! manifest.json, download each `UpdateDownload.path` (relative to the
+//! manifest URL), then `install_update`. The app does the transfers.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use limes_core::db::{Reader, SCHEMA_VERSION};
 use limes_core::matcher::{Fix, Matcher};
+use limes_core::update::{self, Action, Entry, Manifest, Store};
 use limes_core::{DriveTime, Vehicle};
 
 uniffi::setup_scaffolding!();
@@ -21,6 +26,24 @@ pub enum LimesError {
         "database schema {found} is newer than this app supports ({supported}); update the app"
     )]
     UnsupportedSchema { found: u32, supported: u32 },
+    #[error("update error: {message}")]
+    Update { message: String },
+    /// The download does not match the manifest; delete it and fetch again.
+    #[error("download mismatch: {message}")]
+    DownloadMismatch { message: String },
+    #[error("open_store has not been called")]
+    NoStore,
+}
+
+impl From<update::Error> for LimesError {
+    fn from(e: update::Error) -> Self {
+        match e {
+            update::Error::Mismatch(message) => LimesError::DownloadMismatch { message },
+            e => LimesError::Update {
+                message: e.to_string(),
+            },
+        }
+    }
 }
 
 impl From<limes_core::db::Error> for LimesError {
@@ -75,14 +98,72 @@ pub struct RoadSpeed {
 pub struct DatabaseInfo {
     pub path: String,
     pub prefecture: Option<String>,
+    pub version: Option<String>,
     pub jartic_month: Option<String>,
     pub osm_date: Option<String>,
+}
+
+/// A prefecture to download, as listed in the manifest.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct UpdateDownload {
+    pub prefecture: String,
+    pub version: String,
+    pub schema_version: u32,
+    pub jartic_month: Option<String>,
+    pub osm_date: Option<String>,
+    /// Relative to the manifest URL.
+    pub path: String,
+    pub size: u64,
+    pub sha256: String,
+    /// Disk space needed after decompression.
+    pub raw_size: u64,
+}
+
+impl From<(String, Entry)> for UpdateDownload {
+    fn from((prefecture, e): (String, Entry)) -> Self {
+        Self {
+            prefecture,
+            version: e.version,
+            schema_version: e.schema_version,
+            jartic_month: e.jartic_month,
+            osm_date: e.osm_date,
+            path: e.path,
+            size: e.size,
+            sha256: e.sha256,
+            raw_size: e.raw_size,
+        }
+    }
+}
+
+impl From<&UpdateDownload> for Entry {
+    fn from(d: &UpdateDownload) -> Self {
+        Entry {
+            version: d.version.clone(),
+            schema_version: d.schema_version,
+            jartic_month: d.jartic_month.clone(),
+            osm_date: d.osm_date.clone(),
+            path: d.path.clone(),
+            size: d.size,
+            sha256: d.sha256.clone(),
+            raw_size: d.raw_size,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, uniffi::Record)]
+pub struct UpdatePlan {
+    pub downloads: Vec<UpdateDownload>,
+    pub up_to_date: Vec<String>,
+    /// Published with a newer database schema; prompt for an app update.
+    pub app_update_required: Vec<String>,
+    pub not_published: Vec<String>,
 }
 
 #[derive(uniffi::Object)]
 pub struct Engine {
     databases: Mutex<Vec<(String, Reader)>>,
     matcher: Mutex<Matcher>,
+    store: Mutex<Option<Store>>,
 }
 
 #[uniffi::export]
@@ -92,6 +173,7 @@ impl Engine {
         Arc::new(Self {
             databases: Mutex::new(Vec::new()),
             matcher: Mutex::new(Matcher::new()),
+            store: Mutex::new(None),
         })
     }
 
@@ -111,6 +193,7 @@ impl Engine {
         let info = DatabaseInfo {
             path: path.clone(),
             prefecture: reader.meta("prefecture")?,
+            version: reader.meta("version")?,
             jartic_month: reader.meta("jartic_month")?,
             osm_date: reader.meta("osm_date")?,
         };
@@ -122,6 +205,74 @@ impl Engine {
 
     pub fn close_database(&self, path: String) {
         self.databases.lock().unwrap().retain(|(p, _)| *p != path);
+    }
+
+    /// Use `dir` for downloaded prefectures: clears interrupted installs and
+    /// opens every installed database. A database that fails to open is
+    /// skipped (it shows up again in `plan_updates` as a download).
+    pub fn open_store(&self, dir: String) -> Result<Vec<DatabaseInfo>, LimesError> {
+        let store = Store::open(Path::new(&dir))?;
+        let mut opened = Vec::new();
+        for prefecture in store.installed()? {
+            let path = store.current(&prefecture).to_string_lossy().into_owned();
+            if let Ok(info) = self.open_database(path) {
+                opened.push(info);
+            }
+        }
+        *self.store.lock().unwrap() = Some(store);
+        Ok(opened)
+    }
+
+    /// Compare the manifest with the store for the wanted prefectures.
+    pub fn plan_updates(
+        &self,
+        manifest_json: String,
+        prefectures: Vec<String>,
+    ) -> Result<UpdatePlan, LimesError> {
+        let manifest = Manifest::parse(&manifest_json)?;
+        let guard = self.store.lock().unwrap();
+        let store = guard.as_ref().ok_or(LimesError::NoStore)?;
+        let mut plan = UpdatePlan::default();
+        for (prefecture, action) in store.plan(&manifest, &prefectures) {
+            match action {
+                Action::Download(entry) => plan.downloads.push((prefecture, entry).into()),
+                Action::UpToDate => plan.up_to_date.push(prefecture),
+                Action::AppUpdateRequired => plan.app_update_required.push(prefecture),
+                Action::NotPublished => plan.not_published.push(prefecture),
+            }
+        }
+        Ok(plan)
+    }
+
+    /// Verify a finished download and switch to it; the previous version is
+    /// kept for `roll_back`. The download file is left for the app to delete.
+    pub fn install_update(
+        &self,
+        download: UpdateDownload,
+        file: String,
+    ) -> Result<DatabaseInfo, LimesError> {
+        let guard = self.store.lock().unwrap();
+        let store = guard.as_ref().ok_or(LimesError::NoStore)?;
+        let prefecture = &download.prefecture;
+        self.switch(store, prefecture, |s| {
+            s.install(prefecture, &Entry::from(&download), Path::new(&file))
+        })
+    }
+
+    /// Go back to the version replaced by the last install.
+    pub fn roll_back(&self, prefecture: String) -> Result<DatabaseInfo, LimesError> {
+        let guard = self.store.lock().unwrap();
+        let store = guard.as_ref().ok_or(LimesError::NoStore)?;
+        self.switch(store, &prefecture, |s| s.roll_back(&prefecture))
+    }
+
+    /// Close and delete a prefecture.
+    pub fn remove_prefecture(&self, prefecture: String) -> Result<(), LimesError> {
+        let guard = self.store.lock().unwrap();
+        let store = guard.as_ref().ok_or(LimesError::NoStore)?;
+        self.close_database(store.current(&prefecture).to_string_lossy().into_owned());
+        store.remove(&prefecture)?;
+        Ok(())
     }
 
     /// The road at this fix and its maximum speed for an ordinary car, or None
@@ -166,10 +317,31 @@ impl Engine {
     }
 }
 
+impl Engine {
+    /// Close the prefecture (a file in use cannot be replaced on every
+    /// platform), run `change`, and reopen whichever version is in place.
+    fn switch(
+        &self,
+        store: &Store,
+        prefecture: &str,
+        change: impl FnOnce(&Store) -> Result<(), update::Error>,
+    ) -> Result<DatabaseInfo, LimesError> {
+        let path = store.current(prefecture).to_string_lossy().into_owned();
+        self.close_database(path.clone());
+        let changed = change(store);
+        let reopened = Path::new(&path).exists().then(|| self.open_database(path));
+        changed?;
+        reopened.ok_or(LimesError::Update {
+            message: format!("{prefecture}: no database after the switch"),
+        })?
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use limes_core::db::{SegmentRecord, Writer};
+    use limes_core::update::{self, Manifest};
 
     #[test]
     fn open_and_locate() {
@@ -212,6 +384,107 @@ mod tests {
         assert!(engine.locate(fix(141.36), time.clone()).is_none());
         engine.close_database(path);
         assert!(engine.locate(fix(141.35001), time).is_none());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn update_through_the_store() {
+        let dir = std::env::temp_dir().join(format!("limes-ffi-store-{}", std::process::id()));
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let publish = |version: &str| {
+            let db = dir.join(format!("{version}.sqlite"));
+            let record: SegmentRecord = serde_json::from_str(
+                r#"{"osm_id":5,"seq":0,"highway":"motorway","coords":[[141.35,43.089],[141.35,43.091]]}"#,
+            )
+            .unwrap();
+            let mut writer = Writer::create(&db).unwrap();
+            writer.set_meta("prefecture", "hokkaido").unwrap();
+            writer.set_meta("version", version).unwrap();
+            writer.add(&record).unwrap();
+            writer.finish().unwrap();
+            let name = format!("hokkaido-{version}.sqlite.zst");
+            let (_, entry) = update::package(&db, &dir.join(&name), &name, 3).unwrap();
+            let manifest = Manifest {
+                format: update::MANIFEST_FORMAT,
+                generated_at: String::new(),
+                prefectures: [("hokkaido".to_string(), entry)].into(),
+            };
+            (
+                dir.join(name).to_string_lossy().into_owned(),
+                serde_json::to_string(&manifest).unwrap(),
+            )
+        };
+        let wanted = vec!["hokkaido".to_string()];
+
+        let engine = Engine::new();
+        assert!(matches!(
+            engine.plan_updates("{}".into(), wanted.clone()),
+            Err(LimesError::Update { .. })
+        ));
+        let store = dir.join("store").to_string_lossy().into_owned();
+        assert!(engine.open_store(store.clone()).unwrap().is_empty());
+
+        let (file, manifest) = publish("v1");
+        let plan = engine
+            .plan_updates(manifest.clone(), wanted.clone())
+            .unwrap();
+        assert_eq!(plan.downloads.len(), 1);
+        let info = engine
+            .install_update(plan.downloads[0].clone(), file)
+            .unwrap();
+        assert_eq!(info.version.as_deref(), Some("v1"));
+        assert_eq!(
+            engine
+                .plan_updates(manifest, wanted.clone())
+                .unwrap()
+                .up_to_date,
+            wanted
+        );
+
+        let (file, manifest) = publish("v2");
+        let mut download = engine
+            .plan_updates(manifest, wanted.clone())
+            .unwrap()
+            .downloads[0]
+            .clone();
+        download.sha256 = "0".repeat(64);
+        assert!(matches!(
+            engine.install_update(download.clone(), file.clone()),
+            Err(LimesError::DownloadMismatch { .. })
+        ));
+        let time = LocalTime {
+            month: 11,
+            day: 9,
+            minute_of_day: 600,
+            weekday: 0,
+            holiday: false,
+        };
+        let fix = GpsFix {
+            lon: 141.35001,
+            lat: 43.09,
+            heading: Some(0.0),
+            speed_mps: Some(25.0),
+        };
+        // The old version stays open after a failed install.
+        assert!(engine.locate(fix.clone(), time.clone()).is_some());
+
+        let (_, manifest) = publish("v2");
+        let download = engine
+            .plan_updates(manifest, wanted.clone())
+            .unwrap()
+            .downloads[0]
+            .clone();
+        let info = engine.install_update(download, file).unwrap();
+        assert_eq!(info.version.as_deref(), Some("v2"));
+        let info = engine.roll_back("hokkaido".into()).unwrap();
+        assert_eq!(info.version.as_deref(), Some("v1"));
+
+        // A fresh engine finds the installed prefecture.
+        let opened = Engine::new().open_store(store).unwrap();
+        assert_eq!(opened[0].version.as_deref(), Some("v1"));
+        engine.remove_prefecture("hokkaido".into()).unwrap();
+        assert!(engine.locate(fix, time).is_none());
         std::fs::remove_dir_all(&dir).ok();
     }
 }
