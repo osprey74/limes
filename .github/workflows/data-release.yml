@@ -196,10 +196,16 @@ jobs:
 
       # Databases, tiles, stats and the JARTIC archive first; manifest.json
       # (what the apps read) and state.json only after them.
+      # R2 now and then rejects a multipart upload (InvalidPart); sync again
+      # uploads only what is missing.
       - name: Upload
         run: |
-          aws s3 sync data/dist/ "$BUCKET/" --endpoint-url "$R2_ENDPOINT" \
-            --exclude manifest.json --exclude state.json
+          for attempt in 1 2 3; do
+            aws s3 sync data/dist/ "$BUCKET/" --endpoint-url "$R2_ENDPOINT" \
+              --exclude manifest.json --exclude state.json && break
+            if [ "$attempt" = 3 ]; then exit 1; fi
+            echo "sync failed, retrying ($attempt)"; sleep 30
+          done
           for f in manifest.json state.json; do
             if [ -f "data/dist/$f" ]; then
               aws s3 cp "data/dist/$f" "$BUCKET/$f" --endpoint-url "$R2_ENDPOINT" \
