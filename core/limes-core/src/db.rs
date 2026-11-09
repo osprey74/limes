@@ -186,6 +186,17 @@ pub struct Segment {
     pub time_dependent: bool,
 }
 
+/// A segment's baked decision and geometry only.
+#[derive(Debug, Clone)]
+pub struct BakedSegment {
+    pub id: i64,
+    pub highway: String,
+    pub coords: Vec<[f64; 2]>,
+    pub speed: u16,
+    pub confidence: Confidence,
+    pub time_dependent: bool,
+}
+
 /// Read-only access to a prefecture database.
 pub struct Reader {
     conn: Connection,
@@ -201,6 +212,33 @@ impl Reader {
         self.conn
             .query_row("SELECT value FROM meta WHERE key = ?1", [key], |r| r.get(0))
             .optional()
+    }
+
+    /// Every segment's baked decision and geometry, in id order, without
+    /// parsing the evidence (for the map tiles).
+    pub fn for_each_baked(&self, mut f: impl FnMut(BakedSegment)) -> rusqlite::Result<()> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, highway, geom, speed, confidence, time_dependent FROM segments ORDER BY id",
+        )?;
+        let mut rows = stmt.query([])?;
+        while let Some(r) = rows.next()? {
+            let confidence: String = r.get(4)?;
+            f(BakedSegment {
+                id: r.get(0)?,
+                highway: r.get(1)?,
+                coords: decode_coords(&r.get::<_, Vec<u8>>(2)?),
+                speed: r.get(3)?,
+                confidence: Confidence::parse(&confidence).ok_or_else(|| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        4,
+                        rusqlite::types::Type::Text,
+                        confidence.clone().into(),
+                    )
+                })?,
+                time_dependent: r.get(5)?,
+            });
+        }
+        Ok(())
     }
 
     /// Segments whose bounding boxes intersect the given box (degrees).

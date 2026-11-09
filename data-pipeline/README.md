@@ -59,8 +59,10 @@ uv run python scripts/gate.py hokkaido --csv data/raw/typeD_hokkaido.csv \
   --db data/build/hokkaido.sqlite --release-meta data/raw/typeD_hokkaido.meta.json \
   --previous data/published/stats/hokkaido.json --limes-cli ../core/target/release/limes-cli \
   --stats-out data/dist/stats/hokkaido.json --report data/build/hokkaido.gate.md
-# Compress for publishing and add the entry to data/dist/manifest.json
-../core/target/release/limes-cli package --db data/build/hokkaido.sqlite --out-dir data/dist
+# Speed-line vector tiles for the speed map (PMTiles, z5-14)
+../core/target/release/limes-cli tiles --db data/build/hokkaido.sqlite --out data/build/hokkaido.pmtiles
+# Compress for publishing and add the entry (with the tiles) to data/dist/manifest.json
+../core/target/release/limes-cli package --db data/build/hokkaido.sqlite   --tiles data/build/hokkaido.pmtiles --out-dir data/dist
 ```
 
 `--bbox west,south,east,north` limits `build_evidence` to a test area.
@@ -89,7 +91,9 @@ uv run python scripts/release.py build --published data/published --dist data/di
   --limes-cli ../core/target/release/limes-cli
 ```
 
-`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. `build` fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), downloads the Geofabrik extract, builds the evidence and database, runs the gate and packages what passed into `data/dist`. A prefecture that fails keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The job uploads the databases, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` (the archive, `map/`) are never deleted.
+`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. `build` fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), downloads the Geofabrik extract, builds the evidence and database, runs the gate and packages what passed into `data/dist`. A prefecture that fails keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The job uploads the databases, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases and tiles (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` and `.pmtiles` (the archive, `map/`) are never deleted.
+
+The speed tiles have one layer, `speed`, with `speed`, `conf` (high/mid/low), `class` (motorway, trunk, primary, secondary, tertiary, minor, service) and `td` = 1 when the speed depends on date or time. Major roads appear from z5-z10 by class, local roads from z12 and service roads at z14 (overzoomed beyond). Consecutive segments with the same properties are joined, so features carry no id: the app looks up the segment under a tap in its database. Hokkaido: 24.5 MB, about 3 s.
 
 Bucket layout:
 
@@ -97,6 +101,7 @@ Bucket layout:
 | --- | --- |
 | `manifest.json` | Prefecture databases the apps read (`Cache-Control: no-cache`) |
 | `<prefecture>-<version>.sqlite.zst` | Database; `version` is `<JARTIC month>.<UTC build time>` |
+| `<prefecture>-<version>.pmtiles` | Speed-line tiles of the same build (`tiles` in the manifest entry) |
 | `stats/<prefecture>.json` | Gate stats of the published build |
 | `state.json` | JARTIC release each prefecture was built from |
 | `archive/jartic/<release>/typeD_<prefecture>.zip` | Original JARTIC ZIPs |

@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 
 use limes_core::db::{Reader, SCHEMA_VERSION};
 use limes_core::matcher::{Fix, Matcher};
-use limes_core::update::{self, Action, Entry, Manifest, Store};
+use limes_core::update::{self, Action, Entry, FileRef, Manifest, Store};
 use limes_core::{DriveTime, Vehicle};
 
 uniffi::setup_scaffolding!();
@@ -117,6 +117,36 @@ pub struct UpdateDownload {
     pub sha256: String,
     /// Disk space needed after decompression.
     pub raw_size: u64,
+    /// Speed-line tiles (PMTiles) of the same build, when published.
+    pub tiles: Option<PublishedFile>,
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct PublishedFile {
+    /// Relative to the manifest URL.
+    pub path: String,
+    pub size: u64,
+    pub sha256: String,
+}
+
+impl From<FileRef> for PublishedFile {
+    fn from(f: FileRef) -> Self {
+        Self {
+            path: f.path,
+            size: f.size,
+            sha256: f.sha256,
+        }
+    }
+}
+
+impl From<&PublishedFile> for FileRef {
+    fn from(f: &PublishedFile) -> Self {
+        Self {
+            path: f.path.clone(),
+            size: f.size,
+            sha256: f.sha256.clone(),
+        }
+    }
 }
 
 impl From<(String, Entry)> for UpdateDownload {
@@ -131,6 +161,7 @@ impl From<(String, Entry)> for UpdateDownload {
             size: e.size,
             sha256: e.sha256,
             raw_size: e.raw_size,
+            tiles: e.tiles.map(PublishedFile::from),
         }
     }
 }
@@ -146,6 +177,7 @@ impl From<&UpdateDownload> for Entry {
             size: d.size,
             sha256: d.sha256.clone(),
             raw_size: d.raw_size,
+            tiles: d.tiles.as_ref().map(FileRef::from),
         }
     }
 }

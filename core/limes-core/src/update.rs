@@ -52,6 +52,33 @@ pub struct Entry {
     pub sha256: String,
     /// Size after decompression, for the free-space check.
     pub raw_size: u64,
+    /// Speed-line vector tiles (PMTiles) built from the same database.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tiles: Option<FileRef>,
+}
+
+/// A published file other than the database.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FileRef {
+    /// Relative to the manifest.
+    pub path: String,
+    pub size: u64,
+    /// Lowercase hex.
+    pub sha256: String,
+}
+
+impl FileRef {
+    /// Copies `source` to `<out_dir>/<path>` and describes the copy.
+    pub fn publish(source: &Path, out_dir: &Path, path: &str) -> Result<Self, Error> {
+        let target = out_dir.join(path);
+        fs::copy(source, &target)?;
+        let (sha256, size) = sha256_hex(&mut File::open(&target)?)?;
+        Ok(Self {
+            path: path.to_string(),
+            size,
+            sha256,
+        })
+    }
 }
 
 impl Manifest {
@@ -333,6 +360,7 @@ pub fn package(db: &Path, out: &Path, path: &str, level: i32) -> Result<(String,
             size,
             sha256,
             raw_size,
+            tiles: None,
         },
     ))
 }
@@ -437,6 +465,32 @@ mod tests {
         assert!(!dir.join("store/hokkaido.sqlite.part").exists());
         assert_eq!(store.installed_version("hokkaido").as_deref(), Some("v1"));
         assert!(!store.previous("hokkaido").exists());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn tiles_entry_is_optional_and_published_with_its_hash() {
+        let dir = temp_dir("tiles");
+        let (_, mut e) = publish(&dir, "v1");
+        let json = serde_json::to_value(&e).unwrap();
+        assert!(json.get("tiles").is_none()); // older apps' manifests stay unchanged
+
+        fs::write(dir.join("speed.pmtiles"), b"abc").unwrap();
+        let out = dir.join("dist");
+        fs::create_dir_all(&out).unwrap();
+        let file =
+            FileRef::publish(&dir.join("speed.pmtiles"), &out, "hokkaido-v1.pmtiles").unwrap();
+        assert_eq!(fs::read(out.join("hokkaido-v1.pmtiles")).unwrap(), b"abc");
+        assert_eq!(
+            (file.size, file.sha256.as_str()),
+            (
+                3,
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+            )
+        );
+        e.tiles = Some(file);
+        let back: Entry = serde_json::from_value(serde_json::to_value(&e).unwrap()).unwrap();
+        assert_eq!(back, e);
         fs::remove_dir_all(&dir).ok();
     }
 

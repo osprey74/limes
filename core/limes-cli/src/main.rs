@@ -4,7 +4,8 @@
 //!   limes-cli golden [cases.json]
 //!   limes-cli build-db --out pref.sqlite [--meta key=value]... < evidence.ndjson
 //!   limes-cli locate --db pref.sqlite lon,lat[,heading,speed_mps]...
-//!   limes-cli package --db pref.sqlite --out-dir dist [--level 1-22]
+//!   limes-cli package --db pref.sqlite --out-dir dist [--tiles pref.pmtiles] [--level 1-22]
+//!   limes-cli tiles --db pref.sqlite --out pref.pmtiles [--min-zoom 5] [--max-zoom 14]
 //!
 //! `decide` reads one WayEvidence JSON object per line and writes one line per
 //! way: {"osm_id", "decision", "time_dependent"}. `--at` sets the date and time
@@ -16,7 +17,11 @@
 //! `locate` map-matches fixes against a database (one result line per fix).
 //! `package` compresses a database (meta `prefecture` and `version` required)
 //! to `<out-dir>/<prefecture>-<version>.sqlite.zst` and adds or replaces its
-//! entry in `<out-dir>/manifest.json`.
+//! entry in `<out-dir>/manifest.json`; `--tiles` publishes the speed tiles
+//! alongside as `<prefecture>-<version>.pmtiles`.
+//! `tiles` writes the speed-line vector tiles for the speed map (see tiles.rs).
+
+mod tiles;
 
 use std::io::{self, BufRead, BufWriter, Write};
 use std::process::ExitCode;
@@ -235,15 +240,18 @@ fn utc(secs: i64) -> String {
 }
 
 fn run_package(args: &[String]) -> Result<(), String> {
-    let usage =
-        || "usage: limes-cli package --db pref.sqlite --out-dir dist [--level 1-22]".to_string();
-    let (mut db, mut out_dir, mut level) = (None, None, 19);
+    let usage = || {
+        "usage: limes-cli package --db pref.sqlite --out-dir dist [--tiles pref.pmtiles] [--level 1-22]"
+            .to_string()
+    };
+    let (mut db, mut out_dir, mut tiles, mut level) = (None, None, None, 19);
     let mut it = args.iter();
     while let Some(flag) = it.next() {
         let value = it.next().ok_or_else(usage)?;
         match flag.as_str() {
             "--db" => db = Some(PathBuf::from(value)),
             "--out-dir" => out_dir = Some(PathBuf::from(value)),
+            "--tiles" => tiles = Some(PathBuf::from(value)),
             "--level" => level = value.parse().map_err(|_| usage())?,
             _ => return Err(usage()),
         }
@@ -273,8 +281,14 @@ fn run_package(args: &[String]) -> Result<(), String> {
 
     std::fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
     let name = format!("{prefecture}-{version}.sqlite.zst");
-    let (prefecture, entry) =
+    let (prefecture, mut entry) =
         update::package(&db, &out_dir.join(&name), &name, level).map_err(|e| e.to_string())?;
+    if let Some(tiles) = tiles {
+        let name = format!("{prefecture}-{version}.pmtiles");
+        let file = update::FileRef::publish(&tiles, &out_dir, &name).map_err(|e| e.to_string())?;
+        eprintln!("{} -> {name}: {} bytes", tiles.display(), file.size);
+        entry.tiles = Some(file);
+    }
     eprintln!(
         "{} -> {name}: {} -> {} bytes ({:.1}%)",
         db.display(),
@@ -301,6 +315,40 @@ fn run_package(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn run_tiles(args: &[String]) -> Result<(), String> {
+    let usage = || {
+        "usage: limes-cli tiles --db pref.sqlite --out pref.pmtiles [--min-zoom N] [--max-zoom N]"
+            .to_string()
+    };
+    let (mut db, mut out) = (None, None);
+    let (mut min_zoom, mut max_zoom) = (tiles::MIN_ZOOM, tiles::MAX_ZOOM);
+    let mut it = args.iter();
+    while let Some(flag) = it.next() {
+        let value = it.next().ok_or_else(usage)?;
+        match flag.as_str() {
+            "--db" => db = Some(PathBuf::from(value)),
+            "--out" => out = Some(PathBuf::from(value)),
+            "--min-zoom" => min_zoom = value.parse().map_err(|_| usage())?,
+            "--max-zoom" => max_zoom = value.parse().map_err(|_| usage())?,
+            _ => return Err(usage()),
+        }
+    }
+    if min_zoom > max_zoom || max_zoom > 16 {
+        return Err(usage());
+    }
+    let (db, out) = (db.ok_or_else(usage)?, out.ok_or_else(usage)?);
+    let s = tiles::write(&db, &out, min_zoom, max_zoom)?;
+    eprintln!(
+        "{} segments as {} lines, {} tiles, {:.1} MB -> {}",
+        s.segments,
+        s.lines,
+        s.tiles,
+        s.bytes as f64 / 1e6,
+        out.display()
+    );
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
@@ -309,7 +357,8 @@ fn main() -> ExitCode {
         Some("build-db") => run_build_db(&args[1..]).map(|()| true),
         Some("locate") => run_locate(&args[1..]).map(|()| true),
         Some("package") => run_package(&args[1..]).map(|()| true),
-        _ => Err("usage: limes-cli <decide|golden|build-db|locate|package> ...".into()),
+        Some("tiles") => run_tiles(&args[1..]).map(|()| true),
+        _ => Err("usage: limes-cli <decide|golden|build-db|locate|package|tiles> ...".into()),
     };
     match result {
         Ok(true) => ExitCode::SUCCESS,

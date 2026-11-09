@@ -9,6 +9,7 @@ changes, gate them and lay out what to publish.
 
   manifest.json                         prefecture databases the apps read
   <prefecture>-<version>.sqlite.zst
+  <prefecture>-<version>.pmtiles        speed-line tiles of the same build
   stats/<prefecture>.json               gate stats, the next build's baseline
   state.json                            JARTIC release each prefecture was built from
   archive/jartic/<release>/typeD_<prefecture>.zip   original ZIPs (JARTIC drops old ones)
@@ -20,11 +21,11 @@ prefecture stands alone: one that fails keeps its published version, is listed
 in <work>/failures.md and is tried again on the next run. Upload `--dist` with
 the `.zst`, stats and archive first, then manifest.json, then state.json.
 
-`prune` lists the databases to delete from the bucket: for each prefecture
+`prune` lists the build files to delete from the bucket: for each prefecture
 it keeps the version in the manifest and the newest one before it (an app may
 still be downloading it with last month's manifest), and nothing at all when
-the manifest is missing. Only `<prefecture>-<version>.sqlite.zst` at the top
-level is considered.
+the manifest is missing. Only `<prefecture>-<version>.sqlite.zst` and
+`<prefecture>-<version>.pmtiles` at the top level are considered.
 
 The prefectures to build and their OSM extracts are listed in prefectures.json.
 Only extracts that cover exactly one prefecture work until the evidence build
@@ -51,7 +52,8 @@ from . import evidence, fetch, gate
 CONFIG = Path(__file__).resolve().parent.parent / "prefectures.json"
 OSM_URL = "https://download.geofabrik.de/asia/japan/{region}-latest.osm.pbf"
 STATE_FORMAT = 1
-DATABASE_KEY = re.compile(r"^([a-z]+)-(\d{4}-\d{2}\.\d{12})\.sqlite\.zst$")
+# A build's files: the database and its speed tiles, named by prefecture and version.
+BUILD_KEY = re.compile(r"^([a-z]+)-(\d{4}-\d{2}\.\d{12})\.(sqlite\.zst|pmtiles)$")
 
 
 def release_id(entry: dict) -> str:
@@ -90,18 +92,18 @@ def build_version(target_month: str, now: datetime) -> str:
 
 
 def prune(keys: list[str], manifest: dict) -> list[str]:
-    """Database keys that neither the manifest nor the fallback needs."""
+    """Build files (databases, tiles) that neither the manifest nor the fallback needs."""
     in_use = {}
     for prefecture, entry in manifest.get("prefectures", {}).items():
-        if m := DATABASE_KEY.match(entry["path"]):
+        if m := BUILD_KEY.match(entry["path"]):
             in_use[prefecture] = m[2]
-    older: dict[str, list[tuple[str, str]]] = {}
+    older: dict[tuple[str, str], list[tuple[str, str]]] = {}
     for key in keys:
-        m = DATABASE_KEY.match(key)
+        m = BUILD_KEY.match(key)
         # Unpublished prefectures and versions newer than the one in use (a
         # build that never reached the manifest) are left alone.
         if m and m[1] in in_use and m[2] < in_use[m[1]]:
-            older.setdefault(m[1], []).append((m[2], key))
+            older.setdefault((m[1], m[3]), []).append((m[2], key))
     return sorted(key for found in older.values() for _, key in sorted(found)[:-1])
 
 
@@ -184,7 +186,9 @@ def build_one(
     if code != 0:
         return False, report_text
 
-    run([str(limes_cli), "package", "--db", str(db), "--out-dir", str(dist)])
+    tiles = build / f"{prefecture}.pmtiles"
+    run([str(limes_cli), "tiles", "--db", str(db), "--out", str(tiles)])
+    run([str(limes_cli), "package", "--db", str(db), "--tiles", str(tiles), "--out-dir", str(dist)])
     (dist / "stats").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(stats, dist / "stats" / f"{prefecture}.json")
     state = read_json(dist / "state.json", {"format": STATE_FORMAT, "prefectures": {}})
@@ -259,8 +263,8 @@ def cmd_prune(args: argparse.Namespace) -> int:
     keys = [o["Key"] for o in listing.get("Contents") or []]
     manifest = read_json(args.manifest, {})
     stale = prune(keys, manifest)
-    databases = sum(1 for k in keys if DATABASE_KEY.match(k))
-    print(f"{len(keys)} keys listed, {databases} databases, {len(stale)} to delete", file=sys.stderr)
+    builds = sum(1 for k in keys if BUILD_KEY.match(k))
+    print(f"{len(keys)} keys listed, {builds} build files, {len(stale)} to delete", file=sys.stderr)
     for key in stale:
         print(key)
     return 0

@@ -57,6 +57,18 @@ def test_prune_keeps_current_and_the_one_before():
     assert release.prune(keys, {}) == []
 
 
+def test_prune_handles_tiles_like_databases():
+    keys = [f"hokkaido-2026-0{m}.20261{m}011830.{ext}" for m in (6, 7, 8) for ext in ("sqlite.zst", "pmtiles")]
+    manifest = {"prefectures": {"hokkaido": {
+        "path": "hokkaido-2026-08.202618011830.sqlite.zst",
+        "tiles": {"path": "hokkaido-2026-08.202618011830.pmtiles"},
+    }}}
+    assert release.prune(keys, manifest) == [
+        "hokkaido-2026-06.202616011830.pmtiles",
+        "hokkaido-2026-06.202616011830.sqlite.zst",
+    ]
+
+
 def test_prune_command_reads_the_listing(tmp_path, capsys):
     objects, manifest = tmp_path / "objects.json", tmp_path / "manifest.json"
     keys = [f"hokkaido-2026-0{m}.20261{m}011830.sqlite.zst" for m in (6, 7, 8)]
