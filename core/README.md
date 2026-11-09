@@ -4,9 +4,9 @@ Rust workspace.
 
 | Crate | Role | State |
 | --- | --- | --- |
-| `limes-core` | Speed decision (stages 1-7 with confidence), JARTIC condition evaluation (period, time, weekday, vehicle; target and exclusion blocks), prefecture SQLite (R*Tree) writer/reader, map matching, data updates (manifest, sha256, zstd, atomic switch; the replaced version is not kept), golden cases | In progress |
+| `limes-core` | Speed decision (stages 1-7 with confidence), JARTIC condition evaluation (period, time, weekday, vehicle; target and exclusion blocks), prefecture SQLite (R*Tree) writer/reader, map matching, Japanese holidays (from 2000; checked against the Cabinet Office list in `tests/golden/holidays.txt`), data updates (manifest, sha256, zstd, atomic switch; the replaced version is not kept), golden cases | In progress |
 | `limes-cli` | Pipeline front end: `decide`, `golden` (validation gate), `build-db` (evidence NDJSON to SQLite), `locate` (map-match test), `package` (`.sqlite.zst` and `manifest.json`) | In progress |
-| `limes-ffi` | UniFFI bindings for Swift / Kotlin: `Engine.openDatabase`, `locate`, `closeDatabase`; updates: `openStore`, `planUpdates`, `installUpdate`; storage: `installedDatabases`, `removePrefecture` | In progress |
+| `limes-ffi` | UniFFI bindings for Swift / Kotlin: `Engine.openDatabase`, `locate`, `closeDatabase`, `localTime` (weekday and holiday for a date); updates: `openStore`, `planUpdates`, `installUpdate`; storage: `installedDatabases`, `removePrefecture` | In progress |
 
 The app fetches `manifest.json` and the `.sqlite.zst` files itself; `limes-core::update` verifies and installs them (see the module comment for the store layout and install order).
 

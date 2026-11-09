@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 use limes_core::db::{Reader, SCHEMA_VERSION};
 use limes_core::matcher::{Fix, Matcher};
 use limes_core::update::{self, Action, Entry, Manifest, Store};
-use limes_core::{DriveTime, Vehicle};
+use limes_core::{DriveTime, Vehicle, holiday};
 
 uniffi::setup_scaffolding!();
 
@@ -74,6 +74,20 @@ pub struct LocalTime {
     /// 0 = Monday ... 6 = Sunday.
     pub weekday: u8,
     pub holiday: bool,
+}
+
+/// The local (JST) date and time as `locate` needs it, with the weekday and
+/// the Japanese holiday worked out here (years from 2000).
+#[uniffi::export]
+pub fn local_time(year: i32, month: u8, day: u8, hour: u8, minute: u8) -> LocalTime {
+    let (m, d) = (u32::from(month), u32::from(day));
+    LocalTime {
+        month,
+        day,
+        minute_of_day: u16::from(hour) * 60 + u16::from(minute),
+        weekday: holiday::weekday(year, m, d),
+        holiday: holiday::is_holiday(year, m, d),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -405,6 +419,14 @@ mod tests {
         engine.close_database(path);
         assert!(engine.locate(fix(141.35001), time).is_none());
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn local_time_fills_weekday_and_holiday() {
+        let t = local_time(2026, 9, 22, 7, 30); // 国民の休日, a Tuesday
+        assert_eq!((t.minute_of_day, t.weekday, t.holiday), (450, 1, true));
+        let t = local_time(2026, 11, 9, 12, 0);
+        assert_eq!((t.weekday, t.holiday), (0, false));
     }
 
     #[test]

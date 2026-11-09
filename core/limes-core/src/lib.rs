@@ -7,6 +7,7 @@ pub mod conditions;
 pub mod db;
 pub mod decide;
 pub mod golden;
+pub mod holiday;
 pub mod matcher;
 pub mod update;
 
