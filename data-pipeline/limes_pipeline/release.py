@@ -258,7 +258,10 @@ def cmd_prune(args: argparse.Namespace) -> int:
     listing = json.loads(text) if text.strip() else {}  # the CLI may print nothing for an empty bucket
     keys = [o["Key"] for o in listing.get("Contents") or []]
     manifest = read_json(args.manifest, {})
-    for key in prune(keys, manifest):
+    stale = prune(keys, manifest)
+    databases = sum(1 for k in keys if DATABASE_KEY.match(k))
+    print(f"{len(keys)} keys listed, {databases} databases, {len(stale)} to delete", file=sys.stderr)
+    for key in stale:
         print(key)
     return 0
 
