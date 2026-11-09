@@ -14,6 +14,11 @@ Matching rules carried over from Phase 0 (docs/phase0/findings.md):
   segment's midpoint (minus the excluded parts, NO.30)
 - JARTIC 17 counts as a center line only with side code 3 (both) or blank
 - separated: a one-way major road with an opposite one-way within DUAL_CARRIAGEWAY_M
+
+With --boundary (a region extract split into prefectures), a segment belongs to
+the prefecture that contains its midpoint, so each segment is in exactly one
+prefecture's database; ways near the edge still serve as evidence (e.g. the
+opposite carriageway) for the segments inside.
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ from shapely import STRtree
 from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import substring
 
-from . import jartic
+from . import boundary, jartic
 from .jartic import Col
 from .mesh_check import (
     CAR_HIGHWAYS,
@@ -292,7 +297,8 @@ class Matcher:
         }
 
 
-def segments(ways: list[Way], matcher: Matcher) -> Iterator[dict]:
+def segments(ways: list[Way], matcher: Matcher, area: shapely.Geometry | None = None) -> Iterator[dict]:
+    """Segments of the ways; with `area` (lon/lat, prepared), only those whose midpoint it contains."""
     by_tile: dict[tuple[int, int], list[Way]] = {}
     for w in ways:
         by_tile.setdefault(tile_of(*w.coords[len(w.coords) // 2]), []).append(w)
@@ -308,6 +314,10 @@ def segments(ways: list[Way], matcher: Matcher) -> Iterator[dict]:
             cuts = matcher.cuts(LineString(w.coords), line, proj)
             for seq, piece in enumerate(split(line, cuts=cuts)):
                 piece_ll = LineString([proj.inverse(x, y) for x, y in piece.coords])
+                if area is not None:
+                    mid = piece_ll.interpolate(0.5, normalized=True)
+                    if not shapely.contains_xy(area, mid.x, mid.y):
+                        continue
                 yield {
                     "osm_id": w.osm_id,
                     "seq": seq,
@@ -322,31 +332,54 @@ def segments(ways: list[Way], matcher: Matcher) -> Iterator[dict]:
                 }
 
 
+def clip_to(ways: list[Way], area: shapely.Geometry) -> list[Way]:
+    """Ways that come near the area (lon/lat); the margin keeps the opposite
+    carriageway of a divided road on the border."""
+    near = area.simplify(0.001).buffer(0.01)
+    shapely.prepare(near)
+    keep = shapely.intersects(near, [LineString(w.coords) for w in ways])
+    return [w for w, k in zip(ways, keep) if k]
+
+
+def write_segments(ways: list[Way], jartic_csv: Path, out_path: Path, area: shapely.Geometry | None = None) -> int:
+    """Evidence NDJSON for the ways (only segments inside `area` when given); returns the count."""
+    if area is not None:
+        shapely.prepare(area)
+        ways = clip_to(ways, area)
+    print(f"{len(ways):,} OSM ways", file=sys.stderr)
+    regulations = read_jartic(jartic_csv)
+    print(f"{len(regulations):,} JARTIC regulations", file=sys.stderr)
+    matcher = Matcher(regulations, ways)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    with out_path.open("w", encoding="utf-8") as out:
+        for record in segments(ways, matcher, area):
+            out.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
+            count += 1
+            if count % 100_000 == 0:
+                print(f"{count:,} segments", file=sys.stderr)
+    print(f"{count:,} segments -> {out_path}", file=sys.stderr)
+    return count
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--pbf", type=Path, required=True, help="OSM extract covering the prefecture")
     parser.add_argument("--jartic", type=Path, required=True, help="prefecture JARTIC CSV")
     parser.add_argument("--bbox", help="west,south,east,north: only roads in this box (for tests)")
+    parser.add_argument("--boundary", type=Path, help="prefecture boundaries GeoJSON (scripts/boundaries.py)")
+    parser.add_argument("--iso", help="prefecture to keep from --boundary, e.g. JP-04")
     parser.add_argument("--out", type=Path, required=True, help="NDJSON output")
     args = parser.parse_args(argv)
+    if args.boundary and not args.iso:
+        parser.error("--boundary needs --iso")
 
     ways = read_osm(args.pbf)
     if args.bbox:
         west, south, east, north = (float(v) for v in args.bbox.split(","))
         ways = [w for w in ways if any(west <= lon <= east and south <= lat <= north for lon, lat in w.coords)]
-    print(f"{len(ways):,} OSM ways", file=sys.stderr)
-    regulations = read_jartic(args.jartic)
-    print(f"{len(regulations):,} JARTIC regulations", file=sys.stderr)
-    matcher = Matcher(regulations, ways)
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    count = 0
-    with args.out.open("w", encoding="utf-8") as out:
-        for record in segments(ways, matcher):
-            out.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
-            count += 1
-            if count % 100_000 == 0:
-                print(f"{count:,} segments", file=sys.stderr)
-    print(f"{count:,} segments -> {args.out}", file=sys.stderr)
+    area = boundary.read(args.boundary, args.iso) if args.boundary else None
+    write_segments(ways, args.jartic, args.out, area)
 
 
 if __name__ == "__main__":

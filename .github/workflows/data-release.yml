@@ -1,6 +1,10 @@
 # Daily: detect a new JARTIC release, rebuild the prefectures it changes, gate
 # them and publish what passed to Cloudflare R2 (see data-pipeline/limes_pipeline/release.py).
 #
+#   plan     which prefectures to build, grouped by OSM region
+#   build    one job per region, in parallel
+#   publish  merge the regions' outputs, upload, prune old builds, report failures
+#
 # Repository settings:
 #   secrets R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (R2 API token, Object Read & Write)
 #   variable R2_BUCKET
@@ -28,36 +32,35 @@ permissions:
   contents: read
   issues: write
 
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: auto
+  # Newer AWS CLI checksum headers are not needed by R2.
+  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+  R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+  BUCKET: s3://${{ vars.R2_BUCKET }}
+
+defaults:
+  run:
+    working-directory: data-pipeline
+
 jobs:
-  release:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: auto
-      # Newer AWS CLI checksum headers are not needed by R2.
-      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
-      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-      BUCKET: s3://${{ vars.R2_BUCKET }}
-    defaults:
-      run:
-        working-directory: data-pipeline
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
+      regions: ${{ steps.plan.outputs.regions }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: astral-sh/setup-uv@v6
-
       - run: uv sync --frozen
 
       - name: Fetch published state
         run: |
-          mkdir -p data/published/stats
-          for f in state.json manifest.json; do
-            aws s3 cp "$BUCKET/$f" data/published/ --endpoint-url "$R2_ENDPOINT" || echo "no $f yet"
-          done
-          aws s3 sync "$BUCKET/stats/" data/published/stats/ --endpoint-url "$R2_ENDPOINT"
+          mkdir -p data/published
+          aws s3 cp "$BUCKET/state.json" data/published/ --endpoint-url "$R2_ENDPOINT" || echo "no state.json yet"
 
       - name: Plan
         id: plan
@@ -71,28 +74,97 @@ jobs:
           uv run python scripts/release.py plan "${args[@]}"
 
       - if: steps.plan.outputs.build == 'true'
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan
+          path: data-pipeline/data/work/plan.json
+          retention-days: 3
 
-      - if: steps.plan.outputs.build == 'true'
-        uses: Swatinem/rust-cache@v2
+  build:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJSON(needs.plan.outputs.regions) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
 
-      - if: steps.plan.outputs.build == 'true'
-        name: Build limes-cli
+      - name: Build limes-cli
         working-directory: core
         run: cargo build --release -p limes-cli
 
-      - if: steps.plan.outputs.build == 'true'
-        name: Build and gate
-        run: >-
-          uv run python scripts/release.py build --published data/published --dist data/dist
-          --limes-cli ../core/target/release/limes-cli
+      - uses: actions/download-artifact@v4
+        with:
+          name: plan
+          path: data-pipeline/data/work
 
-      # Databases, stats and the JARTIC archive first; manifest.json (what the
-      # apps read) and state.json only after them.
-      - if: steps.plan.outputs.build == 'true'
-        name: Upload
+      - name: Fetch published state
+        run: |
+          mkdir -p data/published/stats
+          for f in state.json manifest.json; do
+            aws s3 cp "$BUCKET/$f" data/published/ --endpoint-url "$R2_ENDPOINT" || echo "no $f yet"
+          done
+          aws s3 sync "$BUCKET/stats/" data/published/stats/ --endpoint-url "$R2_ENDPOINT"
+
+      - name: Build and gate
+        run: >-
+          uv run python scripts/release.py build --region ${{ matrix.region }}
+          --published data/published --dist data/dist --limes-cli ../core/target/release/limes-cli
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: part-${{ matrix.region }}
+          path: |
+            data-pipeline/data/dist
+            data-pipeline/data/work/built.json
+            data-pipeline/data/work/failures.md
+          compression-level: 0 # databases and tiles are already compressed
+          retention-days: 3
+
+  publish:
+    needs: [plan, build]
+    if: always() && needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: plan
+          path: data-pipeline/data/work
+
+      # A region whose job failed has no part; merge reports it.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: part-*
+          path: data-pipeline/data/parts
+
+      - name: Fetch published state
+        run: |
+          mkdir -p data/published
+          for f in state.json manifest.json; do
+            aws s3 cp "$BUCKET/$f" data/published/ --endpoint-url "$R2_ENDPOINT" || echo "no $f yet"
+          done
+
+      - name: Merge
+        run: >-
+          uv run python scripts/release.py merge --published data/published
+          --parts data/parts --dist data/dist
+
+      # Databases, tiles, stats and the JARTIC archive first; manifest.json
+      # (what the apps read) and state.json only after them.
+      - name: Upload
         run: |
           aws s3 sync data/dist/ "$BUCKET/" --endpoint-url "$R2_ENDPOINT" \
             --exclude manifest.json --exclude state.json
@@ -103,9 +175,9 @@ jobs:
             fi
           done
 
-      # Old databases: keep the version in the manifest and the one before it.
-      - if: steps.plan.outputs.build == 'true'
-        name: Prune old databases
+      # Old builds: keep the version in the manifest and the one before it.
+      - name: Prune old databases
+        if: hashFiles('data-pipeline/data/dist/manifest.json') != ''
         run: |
           aws s3api list-objects-v2 --bucket "${BUCKET#s3://}" --delimiter / \
             --endpoint-url "$R2_ENDPOINT" --output json > data/work/objects.json

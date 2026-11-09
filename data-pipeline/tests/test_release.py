@@ -95,38 +95,102 @@ def test_osm_date(tmp_path):
     assert release.osm_date(pbf) == "2026-11-07"
 
 
-def test_build_keeps_going_after_a_failure(tmp_path, monkeypatch):
+
+
+CONFIG = {
+    "hokkaido": {"iso": "JP-01", "osm_region": "hokkaido"},
+    "aomori": {"iso": "JP-02", "osm_region": "tohoku"},
+    "iwate": {"iso": "JP-03", "osm_region": "tohoku"},
+}
+
+
+@pytest.fixture
+def config(monkeypatch):
+    original = release.read_json
+    monkeypatch.setattr(release, "read_json",
+                        lambda path, default: CONFIG if path == release.CONFIG else original(path, default))
+
+
+def test_build_groups_by_region_and_keeps_going(tmp_path, monkeypatch, config):
     published, dist, work = tmp_path / "published", tmp_path / "dist", tmp_path / "work"
     published.mkdir()
     (published / "manifest.json").write_text('{"format": 1}', encoding="utf-8")
-    release.write_json(work / "plan.json", {"release": ENTRY, "prefectures": ["aomori", "hokkaido"]})
-    monkeypatch.setattr(release, "read_json", _config_reader(release.read_json))
-    built = []
+    release.write_json(work / "plan.json", {"release": ENTRY, "prefectures": ["hokkaido", "aomori", "iwate"],
+                                            "regions": ["hokkaido", "tohoku"]})
+    loaded, built = [], []
 
-    def fake_build_one(prefecture, region, entry, published_, dist_, work_, cli, now):
-        built.append(prefecture)
-        if prefecture == "aomori":
+    def load_region(region, work_):
+        loaded.append(region)
+        if region == "hokkaido":
             raise RuntimeError("download failed")
-        return True, "# Gate: hokkaido: PASS\n"
+        return ("pbf", ["ways"], "boundaries")
 
-    monkeypatch.setattr(release, "build_one", fake_build_one)
+    def build_one(prefecture, iso, region, *rest):
+        built.append((prefecture, iso, region[1]))
+        if prefecture == "aomori":
+            return False, "# Gate: aomori: FAIL\n"
+        return True, f"# Gate: {prefecture}: PASS\n"
+
+    monkeypatch.setattr(release, "load_region", load_region)
+    monkeypatch.setattr(release, "build_one", build_one)
     args = ["build", "--published", str(published), "--dist", str(dist), "--work", str(work),
             "--limes-cli", "limes-cli"]
     assert release.main(args) == 0
-    assert built == ["aomori", "hokkaido"]
+    assert loaded == ["hokkaido", "tohoku"]  # each region read once
+    assert built == [("aomori", "JP-02", ["ways"]), ("iwate", "JP-03", ["ways"])]
     assert json.loads((dist / "manifest.json").read_text(encoding="utf-8")) == {"format": 1}
+    assert release.read_json(work / "built.json", None) == {"regions": ["hokkaido", "tohoku"], "passed": ["iwate"]}
     failures = (work / "failures.md").read_text(encoding="utf-8")
-    assert "aomori" in failures and "download failed" in failures
+    assert "hokkaido" in failures and "download failed" in failures and "aomori: FAIL" in failures
 
-    monkeypatch.setattr(release, "build_one", lambda p, *a: (True, f"# Gate: {p}: PASS\n"))
-    assert release.main(args) == 0
-    assert not (work / "failures.md").exists()
+    loaded.clear()
+    assert release.main(args + ["--region", "tohoku"]) == 0
+    assert loaded == ["tohoku"]
+    assert release.read_json(work / "built.json", None)["regions"] == ["tohoku"]
 
 
-def _config_reader(original):
-    def read_json(path, default):
-        if path == release.CONFIG:
-            return {"hokkaido": {"osm_region": "hokkaido"}, "aomori": {"osm_region": "tohoku"}}
-        return original(path, default)
+def _part(parts, region, passed, manifest, state, files=(), failures=None):
+    part = parts / f"part-{region}"
+    release.write_json(part / "work" / "built.json", {"regions": [region], "passed": passed})
+    release.write_json(part / "dist" / "manifest.json", manifest)
+    release.write_json(part / "dist" / "state.json", state)
+    for name in files:
+        (part / "dist" / name).parent.mkdir(parents=True, exist_ok=True)
+        (part / "dist" / name).write_text(name, encoding="utf-8")
+    if failures:
+        (part / "work" / "failures.md").write_text(failures, encoding="utf-8")
 
-    return read_json
+
+def entry(version):
+    return {"path": f"x-{version}.sqlite.zst"}
+
+
+def test_merge_takes_only_what_each_job_built(tmp_path):
+    published, parts, dist = tmp_path / "published", tmp_path / "parts", tmp_path / "dist"
+    release.write_json(published / "manifest.json", {"format": 1, "generated_at": "old",
+                                                     "prefectures": {"hokkaido": entry("h1"), "aomori": entry("a1")}})
+    release.write_json(published / "state.json", {"format": 1, "prefectures": {"aomori": {"version": "a1"}}})
+    # The tohoku job started from the published manifest; aomori failed, iwate passed.
+    _part(parts, "tohoku", ["iwate"],
+          {"format": 1, "prefectures": {"hokkaido": entry("h1"), "aomori": entry("a1"), "iwate": entry("i2")}},
+          {"format": 1, "prefectures": {"aomori": {"version": "a1"}, "iwate": {"version": "i2"}}},
+          files=["iwate-i2.sqlite.zst", "archive/jartic/r/typeD_aomori.zip"], failures="# Gate: aomori: FAIL\n")
+    now = datetime(2026, 11, 9, 18, 30, tzinfo=timezone.utc)
+    failures = release.merge(published, parts, dist, ["tohoku", "kanto"], now)
+
+    manifest = release.read_json(dist / "manifest.json", None)
+    assert manifest["generated_at"] == "2026-11-09T18:30:00Z"
+    assert manifest["prefectures"] == {"hokkaido": entry("h1"), "aomori": entry("a1"), "iwate": entry("i2")}
+    assert release.read_json(dist / "state.json", None)["prefectures"]["iwate"] == {"version": "i2"}
+    assert (dist / "iwate-i2.sqlite.zst").exists() and (dist / "archive/jartic/r/typeD_aomori.zip").exists()
+    assert "aomori: FAIL" in failures[0]
+    assert "Build job failed: kanto" in failures[1]
+
+
+def test_merge_first_publication(tmp_path):
+    parts, dist = tmp_path / "parts", tmp_path / "dist"
+    _part(parts, "tohoku", ["iwate"], {"format": 1, "prefectures": {"iwate": {"path": "i"}}},
+          {"format": 1, "prefectures": {"iwate": {"version": "i"}}})
+    now = datetime(2026, 11, 9, tzinfo=timezone.utc)
+    assert release.merge(tmp_path / "none", parts, dist, ["tohoku"], now) == []
+    assert release.read_json(dist / "manifest.json", None)["prefectures"] == {"iwate": {"path": "i"}}

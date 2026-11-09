@@ -44,10 +44,13 @@ Groups larger than `--max-per-group` (default 60) are randomly sampled; the repo
 ## Phase 1: prefecture database
 
 ```sh
-# OSM extract (Geofabrik regions; Hokkaido is one prefecture)
+# OSM extract of the prefecture's Geofabrik region (prefectures.json: osm_region)
 curl -L -o data/osm/hokkaido-latest.osm.pbf https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf
-# Evidence per road segment (<= 200 m), one JSON line each
+# Prefecture boundaries found in the extract (admin_level=4, ISO3166-2)
+uv run python scripts/boundaries.py --pbf data/osm/hokkaido-latest.osm.pbf --out data/osm/hokkaido.boundaries.geojson
+# Evidence per road segment (<= 200 m) whose midpoint is in the prefecture, one JSON line each
 uv run python scripts/build_evidence.py --pbf data/osm/hokkaido-latest.osm.pbf \
+  --boundary data/osm/hokkaido.boundaries.geojson --iso JP-01 \
   --jartic data/raw/typeD_hokkaido.csv --out data/build/hokkaido.ndjson
 # Decide with limes-core and write the SQLite (R*Tree) the apps read
 (cd ../core && cargo build --release -p limes-cli)
@@ -62,10 +65,13 @@ uv run python scripts/gate.py hokkaido --csv data/raw/typeD_hokkaido.csv \
 # Speed-line vector tiles for the speed map (PMTiles, z5-14)
 ../core/target/release/limes-cli tiles --db data/build/hokkaido.sqlite --out data/build/hokkaido.pmtiles
 # Compress for publishing and add the entry (with the tiles) to data/dist/manifest.json
-../core/target/release/limes-cli package --db data/build/hokkaido.sqlite   --tiles data/build/hokkaido.pmtiles --out-dir data/dist
+../core/target/release/limes-cli package --db data/build/hokkaido.sqlite \
+  --tiles data/build/hokkaido.pmtiles --out-dir data/dist
 ```
 
 `--bbox west,south,east,north` limits `build_evidence` to a test area.
+
+Each prefecture is built from the Geofabrik region extract that contains it (`prefectures.json`; all 47 checked against Geofabrik's region polygons on 2026-11-09, remote islands included). Its boundary assembles only from that extract. A segment goes to the prefecture containing its midpoint, so it is in exactly one database; the app opens neighbouring prefectures to match roads near a border.
 
 The gate fails the build when any of these does not hold (thresholds in `limes_pipeline/gate.py`; provisional until a few monthly releases have been compared):
 
@@ -83,15 +89,19 @@ The stats written by `--stats-out` are published with the build and become `--pr
 
 ## Daily release job
 
-`.github/workflows/data-release.yml` runs every day at 06:30 JST (and by hand with `force` / `only`). It downloads `state.json`, `manifest.json` and `stats/` from the R2 bucket, then:
+`.github/workflows/data-release.yml` runs every day at 06:30 JST (and by hand with `force` / `only`) in three jobs:
 
 ```sh
+# plan: which prefectures to build, grouped by OSM region
 uv run python scripts/release.py plan --published data/published
-uv run python scripts/release.py build --published data/published --dist data/dist \
-  --limes-cli ../core/target/release/limes-cli
+# build: one job per region, in parallel
+uv run python scripts/release.py build --region tohoku --published data/published \
+  --dist data/dist --limes-cli ../core/target/release/limes-cli
+# publish: combine the region jobs' outputs (artifacts), then upload and prune
+uv run python scripts/release.py merge --published data/published --parts data/parts --dist data/dist
 ```
 
-`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. `build` fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), downloads the Geofabrik extract, builds the evidence and database, runs the gate and packages what passed into `data/dist`. A prefecture that fails keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The job uploads the databases, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases and tiles (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` and `.pmtiles` (the archive, `map/`) are never deleted.
+`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. A `build` job downloads its region's Geofabrik extract and reads it and the prefecture boundaries once, then for each prefecture fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), builds the evidence and database, runs the gate and packages what passed. `merge` takes from each job only the prefectures it built. A prefecture that fails, or whose region job did not finish, keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The publish job uploads the databases, tiles, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases and tiles (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` and `.pmtiles` (the archive, `map/`) are never deleted.
 
 The speed tiles have one layer, `speed`, with `speed`, `conf` (high/mid/low), `class` (motorway, trunk, primary, secondary, tertiary, minor, service) and `td` = 1 when the speed depends on date or time. Major roads appear from z5-z10 by class, local roads from z12 and service roads at z14 (overzoomed beyond). Consecutive segments with the same properties are joined, so features carry no id: the app looks up the segment under a tap in its database. Hokkaido: 24.5 MB, about 3 s.
 
@@ -107,5 +117,3 @@ Bucket layout:
 | `archive/jartic/<release>/typeD_<prefecture>.zip` | Original JARTIC ZIPs |
 
 Repository settings: secrets `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (an R2 API token with Object Read & Write on the bucket) and variable `R2_BUCKET`.
-
-Only Hokkaido is listed in `prefectures.json`: its Geofabrik extract is exactly one prefecture, and the evidence build does not yet clip other regions to prefecture boundaries.

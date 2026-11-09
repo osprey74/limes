@@ -1,5 +1,8 @@
+import pytest
+import shapely
 from shapely.geometry import LineString, Polygon
 
+from limes_pipeline import boundary
 from limes_pipeline.evidence import Matcher, Regulation, Way, segments, split
 
 # A straight road running north from 141.35, 43.09 for about 450 m.
@@ -71,3 +74,22 @@ def test_osm_lane_evidence_and_separation():
     assert all(s["separated"] for s in out)
     parallel = Way(3, "primary", {"oneway": "yes"}, [(141.3502, 43.0900), (141.3502, 43.0940)])
     assert not any(s["separated"] for s in run([], [north, parallel]))
+
+
+def test_area_keeps_segments_whose_midpoint_is_inside():
+    # ROAD splits into three ~150 m pieces; the area covers the southern ~200 m.
+    area = Polygon([(141.34, 43.0800), (141.36, 43.0800), (141.36, 43.0918), (141.34, 43.0918)])
+    shapely.prepare(area)
+    ways = [Way(1, "secondary", {}, ROAD)]
+    all_pieces = run([], ways)
+    kept = list(segments(ways, Matcher([], ways), area))
+    assert len(all_pieces) == 3
+    assert [s["seq"] for s in kept] == [0]
+
+
+def test_boundary_geojson_round_trip(tmp_path):
+    square = Polygon([(140, 38), (141, 38), (141, 39), (140, 39)])
+    boundary.write({"JP-04": square}, tmp_path / "b.geojson")
+    assert boundary.read(tmp_path / "b.geojson", "JP-04").equals(square)
+    with pytest.raises(LookupError, match="JP-04"):
+        boundary.read(tmp_path / "b.geojson", "JP-05")
