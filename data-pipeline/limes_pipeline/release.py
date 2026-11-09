@@ -47,6 +47,7 @@ import re
 import shutil
 import subprocess
 import sys
+import traceback
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -138,14 +139,19 @@ def utc_stamp(now: datetime) -> str:
     return now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_region(region: str, work: Path) -> tuple[Path, list[evidence.Way], Path]:
-    """The region's extract (downloaded once), its car roads and its prefecture boundaries."""
+def load_region(
+    region: str, work: Path, boundaries: Path | None = None
+) -> tuple[Path, list[evidence.Way], Path]:
+    """The region's extract (downloaded once), its car roads and the prefecture
+    boundaries: `boundaries` when given (from the Japan extract), else those
+    that assemble from the region extract."""
     pbf = work / "osm" / f"{region}-latest.osm.pbf"
     if not pbf.exists():
         download(OSM_URL.format(region=region), pbf)
-    boundaries = work / "osm" / f"{region}.boundaries.geojson"
-    if not boundaries.exists():
-        boundary.write(boundary.extract(pbf), boundaries)
+    if boundaries is None:
+        boundaries = work / "osm" / f"{region}.boundaries.geojson"
+        if not boundaries.exists():
+            boundary.write(boundary.extract(pbf), boundaries)
     return pbf, evidence.read_osm(pbf), boundaries
 
 
@@ -261,7 +267,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     failures: list[str] = []
     for region_name, prefectures in by_region.items():
         try:
-            region = load_region(region_name, args.work)
+            region = load_region(region_name, args.work, args.boundaries)
         except Exception as e:  # nothing in the region can be built
             failures += [_error_report(p, e) for p in prefectures]
             continue
@@ -297,7 +303,8 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 
 def _error_report(prefecture: str, e: Exception) -> str:
-    return f"# Build error: {prefecture}\n\n```text\n{e!r}\n```\n"
+    where = "".join(traceback.format_exception(e)[-6:])
+    return f"# Build error: {prefecture}\n\n```text\n{where}```\n"
 
 
 def merge(published: Path, parts: Path, dist: Path, regions: list[str], now: datetime) -> list[str]:
@@ -379,6 +386,8 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--work", type=Path, default=Path("data/work"))
     b.add_argument("--limes-cli", type=Path, required=True)
     b.add_argument("--region", help="only the planned prefectures of this OSM region")
+    b.add_argument("--boundaries", type=Path,
+                   help="prefecture boundaries from the Japan extract (scripts/boundaries.py)")
     b.set_defaults(func=cmd_build)
     m = sub.add_parser("merge", help="combine the region jobs' outputs")
     m.add_argument("--published", type=Path, required=True)

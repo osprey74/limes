@@ -1,9 +1,10 @@
 # Daily: detect a new JARTIC release, rebuild the prefectures it changes, gate
 # them and publish what passed to Cloudflare R2 (see data-pipeline/limes_pipeline/release.py).
 #
-#   plan     which prefectures to build, grouped by OSM region
-#   build    one job per region, in parallel
-#   publish  merge the regions' outputs, upload, prune old builds, report failures
+#   plan        which prefectures to build, grouped by OSM region
+#   boundaries  prefecture boundaries from the whole-Japan extract
+#   build       one job per region, in parallel
+#   publish     merge the regions' outputs, upload, prune old builds, report failures
 #
 # Repository settings:
 #   secrets R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (R2 API token, Object Read & Write)
@@ -80,8 +81,33 @@ jobs:
           path: data-pipeline/data/work/plan.json
           retention-days: 3
 
-  build:
+  # Prefecture boundaries from the whole-Japan extract: region extracts cut off
+  # sea boundaries beyond their edge (Tokyo, Okayama, Fukuoka).
+  boundaries:
     needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+
+      - name: Extract prefecture boundaries
+        run: |
+          mkdir -p data/work/osm
+          curl -sSfL -A "limes-pipeline (+https://github.com/osprey74/limes)" \
+            -o data/work/osm/japan-latest.osm.pbf https://download.geofabrik.de/asia/japan-latest.osm.pbf
+          uv run python scripts/boundaries.py --pbf data/work/osm/japan-latest.osm.pbf \
+            --out data/work/osm/japan.boundaries.geojson
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boundaries
+          path: data-pipeline/data/work/osm/japan.boundaries.geojson
+          retention-days: 3
+
+  build:
+    needs: [plan, boundaries]
     if: needs.plan.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 300
@@ -107,6 +133,11 @@ jobs:
           name: plan
           path: data-pipeline/data/work
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: boundaries
+          path: data-pipeline/data/work/osm
+
       - name: Fetch published state
         run: |
           mkdir -p data/published/stats
@@ -118,6 +149,7 @@ jobs:
       - name: Build and gate
         run: >-
           uv run python scripts/release.py build --region ${{ matrix.region }}
+          --boundaries data/work/osm/japan.boundaries.geojson
           --published data/published --dist data/dist --limes-cli ../core/target/release/limes-cli
 
       - uses: actions/upload-artifact@v4

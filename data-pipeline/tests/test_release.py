@@ -119,7 +119,7 @@ def test_build_groups_by_region_and_keeps_going(tmp_path, monkeypatch, config):
                                             "regions": ["hokkaido", "tohoku"]})
     loaded, built = [], []
 
-    def load_region(region, work_):
+    def load_region(region, work_, boundaries=None):
         loaded.append(region)
         if region == "hokkaido":
             raise RuntimeError("download failed")

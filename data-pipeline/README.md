@@ -46,11 +46,12 @@ Groups larger than `--max-per-group` (default 60) are randomly sampled; the repo
 ```sh
 # OSM extract of the prefecture's Geofabrik region (prefectures.json: osm_region)
 curl -L -o data/osm/hokkaido-latest.osm.pbf https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf
-# Prefecture boundaries found in the extract (admin_level=4, ISO3166-2)
-uv run python scripts/boundaries.py --pbf data/osm/hokkaido-latest.osm.pbf --out data/osm/hokkaido.boundaries.geojson
+# Prefecture boundaries (admin_level=4, ISO3166-2) from the whole-Japan extract (2.6 GB)
+curl -L -o data/osm/japan-latest.osm.pbf https://download.geofabrik.de/asia/japan-latest.osm.pbf
+uv run python scripts/boundaries.py --pbf data/osm/japan-latest.osm.pbf --out data/osm/japan.boundaries.geojson
 # Evidence per road segment (<= 200 m) whose midpoint is in the prefecture, one JSON line each
 uv run python scripts/build_evidence.py --pbf data/osm/hokkaido-latest.osm.pbf \
-  --boundary data/osm/hokkaido.boundaries.geojson --iso JP-01 \
+  --boundary data/osm/japan.boundaries.geojson --iso JP-01 \
   --jartic data/raw/typeD_hokkaido.csv --out data/build/hokkaido.ndjson
 # Decide with limes-core and write the SQLite (R*Tree) the apps read
 (cd ../core && cargo build --release -p limes-cli)
@@ -71,7 +72,7 @@ uv run python scripts/gate.py hokkaido --csv data/raw/typeD_hokkaido.csv \
 
 `--bbox west,south,east,north` limits `build_evidence` to a test area.
 
-Each prefecture is built from the Geofabrik region extract that contains it (`prefectures.json`; all 47 checked against Geofabrik's region polygons on 2026-11-09, remote islands included). Its boundary assembles only from that extract. A segment goes to the prefecture containing its midpoint, so it is in exactly one database; the app opens neighbouring prefectures to match roads near a border.
+Each prefecture is built from the Geofabrik region extract that contains it (`prefectures.json`; all 47 checked against Geofabrik's region polygons on 2026-11-09, remote islands included). Boundaries come from the whole-Japan extract: a region extract cuts off boundary ways beyond its edge, so the sea boundaries of Tokyo, Okayama and Fukuoka do not close in theirs. `scripts/boundaries.py` keeps only the boundary ways' nodes in memory and skips a prefecture with any member missing. A segment goes to the prefecture containing its midpoint, so it is in exactly one database; the app opens neighbouring prefectures to match roads near a border.
 
 The gate fails the build when any of these does not hold (thresholds in `limes_pipeline/gate.py`; provisional until a few monthly releases have been compared):
 
@@ -101,7 +102,7 @@ uv run python scripts/release.py build --region tohoku --published data/publishe
 uv run python scripts/release.py merge --published data/published --parts data/parts --dist data/dist
 ```
 
-`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. A `build` job downloads its region's Geofabrik extract and reads it and the prefecture boundaries once, then for each prefecture fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), builds the evidence and database, runs the gate and packages what passed. `merge` takes from each job only the prefectures it built. A prefecture that fails, or whose region job did not finish, keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The publish job uploads the databases, tiles, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases and tiles (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` and `.pmtiles` (the archive, `map/`) are never deleted.
+`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. A `boundaries` job extracts all prefecture boundaries from the Japan extract. A `build` job downloads its region's Geofabrik extract and reads it once, then for each prefecture fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), builds the evidence and database, runs the gate and packages what passed. `merge` takes from each job only the prefectures it built. A prefecture that fails, or whose region job did not finish, keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The publish job uploads the databases, tiles, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases and tiles (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` and `.pmtiles` (the archive, `map/`) are never deleted.
 
 The speed tiles have one layer, `speed`, with `speed`, `conf` (high/mid/low), `class` (motorway, trunk, primary, secondary, tertiary, minor, service) and `td` = 1 when the speed depends on date or time. Major roads appear from z5-z10 by class, local roads from z12 and service roads at z14 (overzoomed beyond). Consecutive segments with the same properties are joined, so features carry no id: the app looks up the segment under a tap in its database. Hokkaido: 24.5 MB, about 3 s.
 

@@ -231,7 +231,8 @@ class Matcher:
                 continue
             crossing = line_ll.intersection(self.areas[j].boundary)
             for point in getattr(crossing, "geoms", [crossing]):
-                if isinstance(point, Point):
+                # No crossing can come back as an empty point (seen in Aichi).
+                if isinstance(point, Point) and not point.is_empty:
                     cuts.append(line.project(m(point.x, point.y)))
         return cuts
 
