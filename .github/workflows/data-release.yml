@@ -1,0 +1,119 @@
+# Daily: detect a new JARTIC release, rebuild the prefectures it changes, gate
+# them and publish what passed to Cloudflare R2 (see data-pipeline/limes_pipeline/release.py).
+#
+# Repository settings:
+#   secrets R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (R2 API token, Object Read & Write)
+#   variable R2_BUCKET
+name: data-release
+
+on:
+  schedule:
+    - cron: "30 21 * * *" # 06:30 JST
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild even if built from the current release
+        type: boolean
+        default: false
+      only:
+        description: Prefectures to build, space separated (default all in prefectures.json)
+        type: string
+        default: ""
+
+concurrency:
+  group: data-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # Newer AWS CLI checksum headers are not needed by R2.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      BUCKET: s3://${{ vars.R2_BUCKET }}
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - run: uv sync --frozen
+
+      - name: Fetch published state
+        run: |
+          mkdir -p data/published/stats
+          for f in state.json manifest.json; do
+            aws s3 cp "$BUCKET/$f" data/published/ --endpoint-url "$R2_ENDPOINT" || echo "no $f yet"
+          done
+          aws s3 sync "$BUCKET/stats/" data/published/stats/ --endpoint-url "$R2_ENDPOINT"
+
+      - name: Plan
+        id: plan
+        env:
+          FORCE: ${{ inputs.force }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          args=(--published data/published)
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          for p in $ONLY; do args+=(--only "$p"); done
+          uv run python scripts/release.py plan "${args[@]}"
+
+      - if: steps.plan.outputs.build == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - if: steps.plan.outputs.build == 'true'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+
+      - if: steps.plan.outputs.build == 'true'
+        name: Build limes-cli
+        working-directory: core
+        run: cargo build --release -p limes-cli
+
+      - if: steps.plan.outputs.build == 'true'
+        name: Build and gate
+        run: >-
+          uv run python scripts/release.py build --published data/published --dist data/dist
+          --limes-cli ../core/target/release/limes-cli
+
+      # Databases, stats and the JARTIC archive first; manifest.json (what the
+      # apps read) and state.json only after them.
+      - if: steps.plan.outputs.build == 'true'
+        name: Upload
+        run: |
+          aws s3 sync data/dist/ "$BUCKET/" --endpoint-url "$R2_ENDPOINT" \
+            --exclude manifest.json --exclude state.json
+          for f in manifest.json state.json; do
+            if [ -f "data/dist/$f" ]; then
+              aws s3 cp "data/dist/$f" "$BUCKET/$f" --endpoint-url "$R2_ENDPOINT" \
+                --content-type application/json --cache-control no-cache
+            fi
+          done
+
+      - if: hashFiles('data-pipeline/data/work/failures.md') != ''
+        name: Report failures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Data release: build or gate failed"
+          body="$(printf 'Run: %s/%s/actions/runs/%s\n\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"; cat data/work/failures.md)"
+          number="$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+          exit 1

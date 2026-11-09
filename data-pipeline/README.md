@@ -78,3 +78,29 @@ The gate fails the build when any of these does not hold (thresholds in `limes_p
 The stats written by `--stats-out` are published with the build and become `--previous` for the next one.
 
 `version` (`[A-Za-z0-9._-]`) names the build; the app downloads a prefecture again when the manifest's version differs from the one it holds. `package` writes `<prefecture>-<version>.sqlite.zst` (zstd level 19 by default; Hokkaido 208 MB -> 44 MB) with its size, sha256 and decompressed size in the manifest. Upload the `.zst` files first and `manifest.json` last.
+
+## Daily release job
+
+`.github/workflows/data-release.yml` runs every day at 06:30 JST (and by hand with `force` / `only`). It downloads `state.json`, `manifest.json` and `stats/` from the R2 bucket, then:
+
+```sh
+uv run python scripts/release.py plan --published data/published
+uv run python scripts/release.py build --published data/published --dist data/dist \
+  --limes-cli ../core/target/release/limes-cli
+```
+
+`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. `build` fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), downloads the Geofabrik extract, builds the evidence and database, runs the gate and packages what passed into `data/dist`. A prefecture that fails keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The job uploads the databases, stats and archive first, then `manifest.json`, then `state.json`.
+
+Bucket layout:
+
+| Key | Content |
+| --- | --- |
+| `manifest.json` | Prefecture databases the apps read (`Cache-Control: no-cache`) |
+| `<prefecture>-<version>.sqlite.zst` | Database; `version` is `<JARTIC month>.<UTC build time>` |
+| `stats/<prefecture>.json` | Gate stats of the published build |
+| `state.json` | JARTIC release each prefecture was built from |
+| `archive/jartic/<release>/typeD_<prefecture>.zip` | Original JARTIC ZIPs |
+
+Repository settings: secrets `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (an R2 API token with Object Read & Write on the bucket) and variable `R2_BUCKET`.
+
+Only Hokkaido is listed in `prefectures.json`: its Geofabrik extract is exactly one prefecture, and the evidence build does not yet clip other regions to prefecture boundaries.
