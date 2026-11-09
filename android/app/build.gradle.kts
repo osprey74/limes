@@ -18,6 +18,9 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
+        // Where manifest.json and the databases are published. r2.dev while in
+        // development; the release domain (limes-app.com) replaces it.
+        buildConfigField("String", "DATA_BASE_URL", "\"https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/\"")
     }
 
     buildTypes {
@@ -38,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     sourceSets["main"].apply {
         jniLibs.srcDir(layout.buildDirectory.dir("rust/jniLibs"))
@@ -91,6 +95,8 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.datastore.preferences)
     implementation("${libs.jna.get()}@aar")
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
