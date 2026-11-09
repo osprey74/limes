@@ -51,6 +51,8 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 file.delete()
             }
         }
+        // Every screen sees the new databases, not only the one that asked.
+        app.data.refreshInstalled()
         app.settings.setLastChecked(System.currentTimeMillis())
         return Result.success(
             workDataOf(

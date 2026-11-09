@@ -6,6 +6,7 @@ import com.osprey74.limes.core.Engine
 import com.osprey74.limes.data.DataModel
 import com.osprey74.limes.data.DataServer
 import com.osprey74.limes.data.Settings
+import com.osprey74.limes.drive.DriveModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,6 +20,7 @@ class LimesApp : Application() {
     val settings: Settings by lazy { Settings(this) }
     val server: DataServer by lazy { DataServer(BuildConfig.DATA_BASE_URL, filesDir) }
     val data: DataModel by lazy { DataModel(this) }
+    val drive: DriveModel by lazy { DriveModel(this) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
