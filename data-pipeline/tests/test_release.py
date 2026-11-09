@@ -37,6 +37,42 @@ def test_build_version():
     assert release.build_version("2026-09", now) == "2026-09.202611091830"
 
 
+def test_prune_keeps_current_and_the_one_before():
+    keys = [
+        "hokkaido-2026-07.202609011830.sqlite.zst",
+        "hokkaido-2026-08.202610011830.sqlite.zst",
+        "hokkaido-2026-09.202611011830.sqlite.zst",  # in use
+        "hokkaido-2026-09.202611021830.sqlite.zst",  # newer, never in the manifest
+        "aomori-2026-08.202610011830.sqlite.zst",
+        "aomori-2026-09.202611011830.sqlite.zst",  # in use
+        "tokyo-2026-08.202610011830.sqlite.zst",  # not in the manifest
+        "map/japan.pmtiles",
+        "manifest.json",
+    ]
+    manifest = {"prefectures": {
+        "hokkaido": {"path": "hokkaido-2026-09.202611011830.sqlite.zst"},
+        "aomori": {"path": "aomori-2026-09.202611011830.sqlite.zst"},
+    }}
+    assert release.prune(keys, manifest) == ["hokkaido-2026-07.202609011830.sqlite.zst"]
+    assert release.prune(keys, {}) == []
+
+
+def test_prune_command_reads_the_listing(tmp_path, capsys):
+    objects, manifest = tmp_path / "objects.json", tmp_path / "manifest.json"
+    keys = [f"hokkaido-2026-0{m}.20261{m}011830.sqlite.zst" for m in (6, 7, 8)]
+    release.write_json(objects, {"Contents": [{"Key": k} for k in keys]})
+    release.write_json(manifest, {"prefectures": {"hokkaido": {"path": keys[2]}}})
+    assert release.main(["prune", "--objects", str(objects), "--manifest", str(manifest)]) == 0
+    assert capsys.readouterr().out.split() == [keys[0]]
+    # An empty bucket lists no Contents at all, or prints nothing.
+    objects.write_text("", encoding="utf-8")
+    assert release.main(["prune", "--objects", str(objects), "--manifest", str(manifest)]) == 0
+    assert capsys.readouterr().out == ""
+    release.write_json(objects, {})
+    assert release.main(["prune", "--objects", str(objects), "--manifest", str(tmp_path / "none.json")]) == 0
+    assert capsys.readouterr().out == ""
+
+
 def test_osm_date(tmp_path):
     pbf = tmp_path / "x.osm.pbf"
     header = osmium.io.Header()

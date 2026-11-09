@@ -103,6 +103,18 @@ jobs:
             fi
           done
 
+      # Old databases: keep the version in the manifest and the one before it.
+      - if: steps.plan.outputs.build == 'true'
+        name: Prune old databases
+        run: |
+          aws s3api list-objects-v2 --bucket "${BUCKET#s3://}" --delimiter / \
+            --endpoint-url "$R2_ENDPOINT" --output json > data/work/objects.json
+          uv run python scripts/release.py prune --objects data/work/objects.json \
+            --manifest data/dist/manifest.json > data/work/prune.txt
+          while read -r key; do
+            aws s3 rm "$BUCKET/$key" --endpoint-url "$R2_ENDPOINT"
+          done < data/work/prune.txt
+
       - if: hashFiles('data-pipeline/data/work/failures.md') != ''
         name: Report failures
         env:

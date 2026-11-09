@@ -89,7 +89,7 @@ uv run python scripts/release.py build --published data/published --dist data/di
   --limes-cli ../core/target/release/limes-cli
 ```
 
-`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. `build` fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), downloads the Geofabrik extract, builds the evidence and database, runs the gate and packages what passed into `data/dist`. A prefecture that fails keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The job uploads the databases, stats and archive first, then `manifest.json`, then `state.json`.
+`plan` reads the current release from `opendata.json` and picks the prefectures in `prefectures.json` that were not built from it. `build` fetches the JARTIC ZIP (kept under `archive/jartic/<release>/` because JARTIC removes old releases), downloads the Geofabrik extract, builds the evidence and database, runs the gate and packages what passed into `data/dist`. A prefecture that fails keeps its published version, goes to `data/work/failures.md` (posted to one open GitHub issue) and is tried again the next day. The job uploads the databases, stats and archive first, then `manifest.json`, then `state.json`, and finally deletes old databases (`release.py prune`): per prefecture it keeps the version in the manifest and the one before it, which an app may still be fetching with the previous manifest. Keys other than `<prefecture>-<version>.sqlite.zst` (the archive, `map/`) are never deleted.
 
 Bucket layout:
 
