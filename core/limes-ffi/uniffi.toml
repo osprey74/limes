@@ -1,0 +1,6 @@
+[bindings.kotlin]
+package_name = "com.osprey74.limes.core"
+cdylib_name = "limes_ffi"
+
+[bindings.swift]
+module_name = "LimesCore"

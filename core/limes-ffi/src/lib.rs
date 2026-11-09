@@ -19,19 +19,21 @@ use limes_core::{DriveTime, Vehicle};
 
 uniffi::setup_scaffolding!();
 
+/// Fields are named `detail`, not `message`, which would clash with
+/// `Throwable.message` in the Kotlin bindings.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum LimesError {
-    #[error("database error: {message}")]
-    Database { message: String },
+    #[error("database error: {detail}")]
+    Database { detail: String },
     #[error(
         "database schema {found} is newer than this app supports ({supported}); update the app"
     )]
     UnsupportedSchema { found: u32, supported: u32 },
-    #[error("update error: {message}")]
-    Update { message: String },
+    #[error("update error: {detail}")]
+    Update { detail: String },
     /// The download does not match the manifest; delete it and fetch again.
-    #[error("download mismatch: {message}")]
-    DownloadMismatch { message: String },
+    #[error("download mismatch: {detail}")]
+    DownloadMismatch { detail: String },
     #[error("open_store has not been called")]
     NoStore,
 }
@@ -39,9 +41,9 @@ pub enum LimesError {
 impl From<update::Error> for LimesError {
     fn from(e: update::Error) -> Self {
         match e {
-            update::Error::Mismatch(message) => LimesError::DownloadMismatch { message },
+            update::Error::Mismatch(detail) => LimesError::DownloadMismatch { detail },
             e => LimesError::Update {
-                message: e.to_string(),
+                detail: e.to_string(),
             },
         }
     }
@@ -50,7 +52,7 @@ impl From<update::Error> for LimesError {
 impl From<limes_core::db::Error> for LimesError {
     fn from(e: limes_core::db::Error) -> Self {
         LimesError::Database {
-            message: e.to_string(),
+            detail: e.to_string(),
         }
     }
 }
@@ -350,7 +352,7 @@ impl Engine {
         let reopened = Path::new(&path).exists().then(|| self.open_database(path));
         changed?;
         reopened.ok_or(LimesError::Update {
-            message: format!("{prefecture}: no database after the switch"),
+            detail: format!("{prefecture}: no database after the switch"),
         })?
     }
 }

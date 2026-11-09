@@ -28,6 +28,7 @@ ios/**/DerivedData/
 android/**/build/
 android/.gradle/
 android/local.properties
+android/.kotlin/
 *.so
 
 # OS / editor

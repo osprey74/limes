@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark ground of the design (#0B0D10) also behind the first frame. -->
+    <style name="Theme.Limes" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ground</item>
+        <item name="android:statusBarColor">@color/ground</item>
+        <item name="android:navigationBarColor">@color/ground</item>
+    </style>
+    <color name="ground">#0B0D10</color>
+</resources>
