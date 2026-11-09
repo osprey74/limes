@@ -18,7 +18,19 @@ class Settings(private val context: Context) {
         val wifiOnly = booleanPreferencesKey("wifi_only")
         val autoUpdate = booleanPreferencesKey("auto_update")
         val lastChecked = longPreferencesKey("last_checked")
+        val autoAddCurrent = booleanPreferencesKey("auto_add_current")
+        val keepAwake = booleanPreferencesKey("keep_awake")
     }
+
+    /** Add the prefecture the car is in and its neighbours (default on). */
+    val autoAddCurrent: Flow<Boolean> = context.dataStore.data.map { it[Keys.autoAddCurrent] ?: true }
+
+    /** Keep the screen on while the driving screen shows (default on). */
+    val keepAwake: Flow<Boolean> = context.dataStore.data.map { it[Keys.keepAwake] ?: true }
+
+    suspend fun setAutoAddCurrent(on: Boolean) = context.dataStore.edit { it[Keys.autoAddCurrent] = on }
+
+    suspend fun setKeepAwake(on: Boolean) = context.dataStore.edit { it[Keys.keepAwake] = on }
 
     /** Prefectures to keep and update (slugs). */
     val selected: Flow<Set<String>> = context.dataStore.data.map { it[Keys.selected] ?: emptySet() }

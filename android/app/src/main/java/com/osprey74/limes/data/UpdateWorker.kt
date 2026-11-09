@@ -16,6 +16,7 @@ import com.osprey74.limes.core.LimesException
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.IOException
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -75,9 +76,10 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             .build()
 
         /** Update now (or as soon as the network allows); a later request runs after it. */
-        fun runNow(context: Context, wifiOnly: Boolean) {
+        fun runNow(context: Context, wifiOnly: Boolean): UUID {
             val request = OneTimeWorkRequestBuilder<UpdateWorker>().setConstraints(constraints(wifiOnly)).build()
             WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+            return request.id
         }
 
         fun scheduleDaily(context: Context, wifiOnly: Boolean) {

@@ -3,9 +3,9 @@ package com.osprey74.limes
 import android.app.Application
 import android.util.Log
 import com.osprey74.limes.core.Engine
+import com.osprey74.limes.data.DataModel
 import com.osprey74.limes.data.DataServer
 import com.osprey74.limes.data.Settings
-import com.osprey74.limes.data.UpdateWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,6 +18,7 @@ class LimesApp : Application() {
     val engine: Engine by lazy { Engine() }
     val settings: Settings by lazy { Settings(this) }
     val server: DataServer by lazy { DataServer(BuildConfig.DATA_BASE_URL, filesDir) }
+    val data: DataModel by lazy { DataModel(this) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -27,12 +28,12 @@ class LimesApp : Application() {
         } catch (e: Exception) {
             Log.e(TAG, "opening the store failed", e)
         }
+        data.refreshInstalled()
         scope.launch {
-            val wifiOnly = settings.wifiOnly.first()
             if (settings.autoUpdate.first()) {
-                UpdateWorker.runNow(this@LimesApp, wifiOnly)
-                UpdateWorker.scheduleDaily(this@LimesApp, wifiOnly)
+                data.checkNow()
             }
+            data.applyUpdateSettings()
         }
     }
 
