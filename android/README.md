@@ -1,3 +1,3 @@
 # android
 
-Android app (Kotlin / Jetpack Compose, MapLibre Native, Play Billing). Not started yet (Phase 2).
+Android app (Kotlin / Jetpack Compose, Play Billing). Not started yet (Phase 2).

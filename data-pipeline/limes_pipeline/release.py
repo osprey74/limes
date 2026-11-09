@@ -10,7 +10,6 @@ changes, gate them and lay out what to publish.
 
   manifest.json                         prefecture databases the apps read
   <prefecture>-<version>.sqlite.zst
-  <prefecture>-<version>.pmtiles        speed-line tiles of the same build
   stats/<prefecture>.json               gate stats, the next build's baseline
   state.json                            JARTIC release each prefecture was built from
   archive/jartic/<release>/typeD_<prefecture>.zip   original ZIPs (JARTIC drops old ones)
@@ -24,14 +23,15 @@ the gate and lists it in <work>/built.json. `merge` combines the `--dist` and
 <work> of each region job (`--parts`/<job>/{dist,work}) into one `--dist`,
 taking only the prefectures each job built. Each prefecture stands alone: one
 that fails keeps its published version, is listed in <work>/failures.md and is
-tried again on the next run. Upload `--dist` with the `.zst`, tiles, stats and
+tried again on the next run. Upload `--dist` with the `.zst`, stats and
 archive first, then manifest.json, then state.json.
 
-`prune` lists the build files to delete from the bucket: for each prefecture
-it keeps the version in the manifest and the newest one before it (an app may
+`prune` lists the databases to delete from the bucket: for each prefecture it
+keeps the version in the manifest and the newest one before it (an app may
 still be downloading it with last month's manifest), and nothing at all when
-the manifest is missing. Only `<prefecture>-<version>.sqlite.zst` and
-`<prefecture>-<version>.pmtiles` at the top level are considered.
+the manifest is missing. Only `<prefecture>-<version>.sqlite.zst` at the top
+level is considered, plus the speed tiles `<prefecture>-<version>.pmtiles`
+published until the speed map was dropped (2026-11-09), which all go.
 
 prefectures.json lists every prefecture with its ISO 3166-2 code and the
 Geofabrik region extract that contains it; segments are cut to the prefecture
@@ -59,8 +59,10 @@ from . import boundary, evidence, fetch, gate
 CONFIG = Path(__file__).resolve().parent.parent / "prefectures.json"
 OSM_URL = "https://download.geofabrik.de/asia/japan/{region}-latest.osm.pbf"
 STATE_FORMAT = 1
-# A build's files: the database and its speed tiles, named by prefecture and version.
-BUILD_KEY = re.compile(r"^([a-z]+)-(\d{4}-\d{2}\.\d{12})\.(sqlite\.zst|pmtiles)$")
+# A build's database, named by prefecture and version.
+BUILD_KEY = re.compile(r"^([a-z]+)-(\d{4}-\d{2}\.\d{12})\.sqlite\.zst$")
+# Speed tiles of earlier builds; nothing uses them since the speed map was dropped.
+TILES_KEY = re.compile(r"^[a-z]+-\d{4}-\d{2}\.\d{12}\.pmtiles$")
 
 
 def release_id(entry: dict) -> str:
@@ -99,19 +101,22 @@ def build_version(target_month: str, now: datetime) -> str:
 
 
 def prune(keys: list[str], manifest: dict) -> list[str]:
-    """Build files (databases, tiles) that neither the manifest nor the fallback needs."""
+    """Databases that neither the manifest nor the fallback needs, and all old speed tiles."""
     in_use = {}
     for prefecture, entry in manifest.get("prefectures", {}).items():
         if m := BUILD_KEY.match(entry["path"]):
             in_use[prefecture] = m[2]
-    older: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    older: dict[str, list[tuple[str, str]]] = {}
     for key in keys:
         m = BUILD_KEY.match(key)
         # Unpublished prefectures and versions newer than the one in use (a
         # build that never reached the manifest) are left alone.
         if m and m[1] in in_use and m[2] < in_use[m[1]]:
-            older.setdefault((m[1], m[3]), []).append((m[2], key))
-    return sorted(key for found in older.values() for _, key in sorted(found)[:-1])
+            older.setdefault(m[1], []).append((m[2], key))
+    stale = [key for found in older.values() for _, key in sorted(found)[:-1]]
+    if in_use:
+        stale += [key for key in keys if TILES_KEY.match(key)]
+    return sorted(stale)
 
 
 def osm_date(pbf: Path) -> str | None:
@@ -212,9 +217,7 @@ def build_one(
     if code != 0:
         return False, report_text
 
-    tiles = build / f"{prefecture}.pmtiles"
-    run([str(limes_cli), "tiles", "--db", str(db), "--out", str(tiles)])
-    run([str(limes_cli), "package", "--db", str(db), "--tiles", str(tiles), "--out-dir", str(dist)])
+    run([str(limes_cli), "package", "--db", str(db), "--out-dir", str(dist)])
     (dist / "stats").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(stats, dist / "stats" / f"{prefecture}.json")
     state = read_json(dist / "state.json", {"format": STATE_FORMAT, "prefectures": {}})
@@ -364,8 +367,8 @@ def cmd_prune(args: argparse.Namespace) -> int:
     keys = [o["Key"] for o in listing.get("Contents") or []]
     manifest = read_json(args.manifest, {})
     stale = prune(keys, manifest)
-    builds = sum(1 for k in keys if BUILD_KEY.match(k))
-    print(f"{len(keys)} keys listed, {builds} build files, {len(stale)} to delete", file=sys.stderr)
+    databases = sum(1 for k in keys if BUILD_KEY.match(k))
+    print(f"{len(keys)} keys listed, {databases} databases, {len(stale)} to delete", file=sys.stderr)
     for key in stale:
         print(key)
     return 0

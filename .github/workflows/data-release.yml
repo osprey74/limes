@@ -159,7 +159,7 @@ jobs:
             data-pipeline/data/dist
             data-pipeline/data/work/built.json
             data-pipeline/data/work/failures.md
-          compression-level: 0 # databases and tiles are already compressed
+          compression-level: 0 # databases are already compressed
           retention-days: 3
 
   publish:
@@ -194,7 +194,7 @@ jobs:
           uv run python scripts/release.py merge --published data/published
           --parts data/parts --dist data/dist
 
-      # Databases, tiles, stats and the JARTIC archive first; manifest.json
+      # Databases, stats and the JARTIC archive first; manifest.json
       # (what the apps read) and state.json only after them.
       # R2 now and then rejects a multipart upload (InvalidPart); sync again
       # uploads only what is missing.

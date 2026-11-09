@@ -13,8 +13,8 @@ Limes は、走行中の道路の最高速度を公開データから推定し�
 | パス | 内容 |
 | --- | --- |
 | `core/` | Rust ワークスペース：`limes-core`（速度判定・マップマッチ・データ更新）、UniFFI バインディング、`limes-cli` |
-| `ios/` | iOS アプリ（Swift／SwiftUI、MapLibre Native） |
-| `android/` | Android アプリ（Kotlin／Jetpack Compose、MapLibre Native） |
+| `ios/` | iOS アプリ（Swift／SwiftUI） |
+| `android/` | Android アプリ（Kotlin／Jetpack Compose） |
 | `data-pipeline/` | Python パイプライン：JARTIC・OSM・国土地理院データの取り込み |
 | `docs/` | 設計メモ、データ検証レポート |
 

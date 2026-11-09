@@ -13,8 +13,8 @@ Estimates always come with a confidence level. Actual road signs and markings ta
 | Path | Contents |
 | --- | --- |
 | `core/` | Rust workspace: `limes-core` (speed decision, map matching, data updates), UniFFI bindings, `limes-cli` |
-| `ios/` | iOS app (Swift / SwiftUI, MapLibre Native) |
-| `android/` | Android app (Kotlin / Jetpack Compose, MapLibre Native) |
+| `ios/` | iOS app (Swift / SwiftUI) |
+| `android/` | Android app (Kotlin / Jetpack Compose) |
 | `data-pipeline/` | Python pipeline: JARTIC / OSM / GSI data ingestion |
 | `docs/` | Design notes and data validation reports |
 

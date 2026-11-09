@@ -6,13 +6,13 @@
 //! Store layout (one directory):
 //!
 //!   <prefecture>.sqlite        the database in use
-//!   <prefecture>.prev.sqlite   the one it replaced, kept for one rollback
 //!   <prefecture>.sqlite.part   staging; removed on failure or by `Store::open`
 //!
 //! Install order: verify size and sha256 of the download, decompress to the
-//! staging file, check its meta, link the current file to `.prev`, then rename
-//! the staging file over the current one. The rename is the switch, so a crash
-//! at any point leaves either the old or the new database in place.
+//! staging file, check its meta, then rename it over the current one. The
+//! rename is the switch, so a crash at any point leaves either the old or the
+//! new database in place. The replaced version is not kept: storage matters
+//! more than a rollback once the new one has been verified (2026-11-09).
 
 use std::collections::BTreeMap;
 use std::fs::{self, File};
@@ -52,33 +52,6 @@ pub struct Entry {
     pub sha256: String,
     /// Size after decompression, for the free-space check.
     pub raw_size: u64,
-    /// Speed-line vector tiles (PMTiles) built from the same database.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tiles: Option<FileRef>,
-}
-
-/// A published file other than the database.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FileRef {
-    /// Relative to the manifest.
-    pub path: String,
-    pub size: u64,
-    /// Lowercase hex.
-    pub sha256: String,
-}
-
-impl FileRef {
-    /// Copies `source` to `<out_dir>/<path>` and describes the copy.
-    pub fn publish(source: &Path, out_dir: &Path, path: &str) -> Result<Self, Error> {
-        let target = out_dir.join(path);
-        fs::copy(source, &target)?;
-        let (sha256, size) = sha256_hex(&mut File::open(&target)?)?;
-        Ok(Self {
-            path: path.to_string(),
-            size,
-            sha256,
-        })
-    }
 }
 
 impl Manifest {
@@ -101,7 +74,6 @@ pub enum Error {
     Manifest(String),
     /// The download does not match the manifest entry.
     Mismatch(String),
-    NothingToRollBack,
 }
 
 impl std::fmt::Display for Error {
@@ -111,7 +83,6 @@ impl std::fmt::Display for Error {
             Error::Database(e) => write!(f, "database: {e}"),
             Error::Manifest(m) => write!(f, "manifest: {m}"),
             Error::Mismatch(m) => write!(f, "download mismatch: {m}"),
-            Error::NothingToRollBack => write!(f, "no previous version to roll back to"),
         }
     }
 }
@@ -186,10 +157,6 @@ impl Store {
         self.dir.join(format!("{prefecture}.sqlite"))
     }
 
-    pub fn previous(&self, prefecture: &str) -> PathBuf {
-        self.dir.join(format!("{prefecture}.prev.sqlite"))
-    }
-
     fn staging(&self, prefecture: &str) -> PathBuf {
         self.dir.join(format!("{prefecture}.sqlite.part"))
     }
@@ -200,9 +167,7 @@ impl Store {
         for entry in fs::read_dir(&self.dir)? {
             let name = entry?.file_name();
             let name = name.to_string_lossy();
-            if let Some(p) = name.strip_suffix(".sqlite")
-                && !p.ends_with(".prev")
-            {
+            if let Some(p) = name.strip_suffix(".sqlite") {
                 out.push(p.to_string());
             }
         }
@@ -255,17 +220,7 @@ impl Store {
             fs::remove_file(&staging).ok();
         }
         result?;
-
-        let (current, previous) = (self.current(prefecture), self.previous(prefecture));
-        if current.exists() {
-            if previous.exists() {
-                fs::remove_file(&previous)?;
-            }
-            if fs::hard_link(&current, &previous).is_err() {
-                fs::copy(&current, &previous)?;
-            }
-        }
-        fs::rename(&staging, &current)?;
+        fs::rename(&staging, self.current(prefecture))?;
         Ok(())
     }
 
@@ -301,22 +256,16 @@ impl Store {
         Ok(())
     }
 
-    /// Puts the previous database back in use; the replaced one is discarded.
-    pub fn roll_back(&self, prefecture: &str) -> Result<(), Error> {
-        let previous = self.previous(prefecture);
-        if !previous.exists() {
-            return Err(Error::NothingToRollBack);
-        }
-        fs::rename(&previous, self.current(prefecture))?;
-        Ok(())
+    /// Size on disk of the prefecture's database, None when not installed.
+    pub fn installed_size(&self, prefecture: &str) -> Option<u64> {
+        fs::metadata(self.current(prefecture)).ok().map(|m| m.len())
     }
 
-    /// Removes a prefecture (current and previous).
+    /// Removes a prefecture's database.
     pub fn remove(&self, prefecture: &str) -> Result<(), Error> {
-        for path in [self.current(prefecture), self.previous(prefecture)] {
-            if path.exists() {
-                fs::remove_file(path)?;
-            }
+        let path = self.current(prefecture);
+        if path.exists() {
+            fs::remove_file(path)?;
         }
         Ok(())
     }
@@ -360,7 +309,6 @@ pub fn package(db: &Path, out: &Path, path: &str, level: i32) -> Result<(String,
             size,
             sha256,
             raw_size,
-            tiles: None,
         },
     ))
 }
@@ -408,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn install_update_and_roll_back() {
+    fn install_update_and_remove() {
         let dir = temp_dir("install");
         let store = Store::open(&dir.join("store")).unwrap();
         let wanted = ["hokkaido".to_string(), "aomori".to_string()];
@@ -424,14 +372,24 @@ mod tests {
         let (v2, e2) = publish(&dir, "v2");
         store.install("hokkaido", &e2, &v2).unwrap();
         assert_eq!(store.installed_version("hokkaido").as_deref(), Some("v2"));
-        assert_eq!(store.installed().unwrap(), ["hokkaido"]);
+        // Only the new version is left in the store.
+        let files: Vec<_> = fs::read_dir(dir.join("store"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(files, ["hokkaido.sqlite"]);
+        assert_eq!(
+            store.installed_size("hokkaido"),
+            Some(
+                fs::metadata(dir.join("store/hokkaido.sqlite"))
+                    .unwrap()
+                    .len()
+            )
+        );
 
-        store.roll_back("hokkaido").unwrap();
-        assert_eq!(store.installed_version("hokkaido").as_deref(), Some("v1"));
-        assert!(matches!(
-            store.roll_back("hokkaido"),
-            Err(Error::NothingToRollBack)
-        ));
+        store.remove("hokkaido").unwrap();
+        assert!(store.installed().unwrap().is_empty());
+        assert_eq!(store.installed_size("hokkaido"), None);
         fs::remove_dir_all(&dir).ok();
     }
 
@@ -464,33 +422,6 @@ mod tests {
         ));
         assert!(!dir.join("store/hokkaido.sqlite.part").exists());
         assert_eq!(store.installed_version("hokkaido").as_deref(), Some("v1"));
-        assert!(!store.previous("hokkaido").exists());
-        fs::remove_dir_all(&dir).ok();
-    }
-
-    #[test]
-    fn tiles_entry_is_optional_and_published_with_its_hash() {
-        let dir = temp_dir("tiles");
-        let (_, mut e) = publish(&dir, "v1");
-        let json = serde_json::to_value(&e).unwrap();
-        assert!(json.get("tiles").is_none()); // older apps' manifests stay unchanged
-
-        fs::write(dir.join("speed.pmtiles"), b"abc").unwrap();
-        let out = dir.join("dist");
-        fs::create_dir_all(&out).unwrap();
-        let file =
-            FileRef::publish(&dir.join("speed.pmtiles"), &out, "hokkaido-v1.pmtiles").unwrap();
-        assert_eq!(fs::read(out.join("hokkaido-v1.pmtiles")).unwrap(), b"abc");
-        assert_eq!(
-            (file.size, file.sha256.as_str()),
-            (
-                3,
-                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-            )
-        );
-        e.tiles = Some(file);
-        let back: Entry = serde_json::from_value(serde_json::to_value(&e).unwrap()).unwrap();
-        assert_eq!(back, e);
         fs::remove_dir_all(&dir).ok();
     }
 
@@ -518,6 +449,11 @@ mod tests {
             Manifest::parse(&serde_json::to_string(&m).unwrap()).unwrap(),
             m
         );
+        // Manifests published with speed tiles (2026-11-09) still parse.
+        let mut with_tiles = serde_json::to_value(&m).unwrap();
+        with_tiles["prefectures"]["hokkaido"]["tiles"] =
+            serde_json::json!({"path": "x.pmtiles", "size": 1, "sha256": "0"});
+        assert_eq!(Manifest::parse(&with_tiles.to_string()).unwrap(), m);
         let newer = serde_json::json!({"format": MANIFEST_FORMAT + 1, "generated_at": "", "prefectures": {}});
         assert!(Manifest::parse(&newer.to_string()).is_err());
         fs::remove_dir_all(&dir).ok();

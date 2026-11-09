@@ -7,13 +7,14 @@
 //! Updates: `open_store` once at launch, `plan_updates` with the fetched
 //! manifest.json, download each `UpdateDownload.path` (relative to the
 //! manifest URL), then `install_update`. The app does the transfers.
+//! `installed_databases` and `remove_prefecture` back the storage settings.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use limes_core::db::{Reader, SCHEMA_VERSION};
 use limes_core::matcher::{Fix, Matcher};
-use limes_core::update::{self, Action, Entry, FileRef, Manifest, Store};
+use limes_core::update::{self, Action, Entry, Manifest, Store};
 use limes_core::{DriveTime, Vehicle};
 
 uniffi::setup_scaffolding!();
@@ -117,36 +118,6 @@ pub struct UpdateDownload {
     pub sha256: String,
     /// Disk space needed after decompression.
     pub raw_size: u64,
-    /// Speed-line tiles (PMTiles) of the same build, when published.
-    pub tiles: Option<PublishedFile>,
-}
-
-#[derive(Debug, Clone, uniffi::Record)]
-pub struct PublishedFile {
-    /// Relative to the manifest URL.
-    pub path: String,
-    pub size: u64,
-    pub sha256: String,
-}
-
-impl From<FileRef> for PublishedFile {
-    fn from(f: FileRef) -> Self {
-        Self {
-            path: f.path,
-            size: f.size,
-            sha256: f.sha256,
-        }
-    }
-}
-
-impl From<&PublishedFile> for FileRef {
-    fn from(f: &PublishedFile) -> Self {
-        Self {
-            path: f.path.clone(),
-            size: f.size,
-            sha256: f.sha256.clone(),
-        }
-    }
 }
 
 impl From<(String, Entry)> for UpdateDownload {
@@ -161,7 +132,6 @@ impl From<(String, Entry)> for UpdateDownload {
             size: e.size,
             sha256: e.sha256,
             raw_size: e.raw_size,
-            tiles: e.tiles.map(PublishedFile::from),
         }
     }
 }
@@ -177,9 +147,16 @@ impl From<&UpdateDownload> for Entry {
             size: d.size,
             sha256: d.sha256.clone(),
             raw_size: d.raw_size,
-            tiles: d.tiles.as_ref().map(FileRef::from),
         }
     }
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct InstalledDatabase {
+    pub prefecture: String,
+    /// None when the file cannot be read (it is then downloaded again).
+    pub version: Option<String>,
+    pub bytes: u64,
 }
 
 #[derive(Debug, Clone, Default, uniffi::Record)]
@@ -276,8 +253,8 @@ impl Engine {
         Ok(plan)
     }
 
-    /// Verify a finished download and switch to it; the previous version is
-    /// kept for `roll_back`. The download file is left for the app to delete.
+    /// Verify a finished download and switch to it; the replaced version is
+    /// deleted. The download file is left for the app to delete.
     pub fn install_update(
         &self,
         download: UpdateDownload,
@@ -291,11 +268,20 @@ impl Engine {
         })
     }
 
-    /// Go back to the version replaced by the last install.
-    pub fn roll_back(&self, prefecture: String) -> Result<DatabaseInfo, LimesError> {
+    /// The installed prefectures with their version and size on disk, for
+    /// the storage view.
+    pub fn installed_databases(&self) -> Result<Vec<InstalledDatabase>, LimesError> {
         let guard = self.store.lock().unwrap();
         let store = guard.as_ref().ok_or(LimesError::NoStore)?;
-        self.switch(store, &prefecture, |s| s.roll_back(&prefecture))
+        Ok(store
+            .installed()?
+            .into_iter()
+            .map(|prefecture| InstalledDatabase {
+                version: store.installed_version(&prefecture),
+                bytes: store.installed_size(&prefecture).unwrap_or(0),
+                prefecture,
+            })
+            .collect())
     }
 
     /// Close and delete a prefecture.
@@ -509,14 +495,23 @@ mod tests {
             .clone();
         let info = engine.install_update(download, file).unwrap();
         assert_eq!(info.version.as_deref(), Some("v2"));
-        let info = engine.roll_back("hokkaido".into()).unwrap();
-        assert_eq!(info.version.as_deref(), Some("v1"));
+        let installed = engine.installed_databases().unwrap();
+        assert_eq!(installed.len(), 1);
+        assert_eq!(
+            (
+                installed[0].prefecture.as_str(),
+                installed[0].version.as_deref()
+            ),
+            ("hokkaido", Some("v2"))
+        );
+        assert!(installed[0].bytes > 0);
 
         // A fresh engine finds the installed prefecture.
         let opened = Engine::new().open_store(store).unwrap();
-        assert_eq!(opened[0].version.as_deref(), Some("v1"));
+        assert_eq!(opened[0].version.as_deref(), Some("v2"));
         engine.remove_prefecture("hokkaido".into()).unwrap();
         assert!(engine.locate(fix, time).is_none());
+        assert!(engine.installed_databases().unwrap().is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }
 }

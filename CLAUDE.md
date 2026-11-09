@@ -7,8 +7,8 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 | パス | 内容 | 状態 |
 | --- | --- | --- |
 | `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFI・更新管理まで） |
-| `ios/` | Swift / SwiftUI、MapLibre Native、StoreKit 2 | 未着手 |
-| `android/` | Kotlin / Jetpack Compose、MapLibre Native、Play Billing | 未着手 |
+| `ios/` | Swift / SwiftUI、StoreKit 2 | 未着手 |
+| `android/` | Kotlin / Jetpack Compose、Play Billing | 未着手 |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |
 | `docs/phase0/` | データ検証レポートと所見 | — |
 
@@ -24,10 +24,12 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 - 判定不能時は数値を出さず「不明」
 - 検証ゲート（`data-pipeline/limes_pipeline/gate.py`）の前回比閾値は±10%で運用を始め、数か月分の実際の変動を見て調整する（2026-11-09決定）
 - 速度超過の警告・表示は実装しない
-- 走行中に速度マップを開くと確認ダイアログ（［走行画面に戻る］／［同乗者が操作する］）
+- 速度マップ（地図に速度線を重ねる画面）は搭載しない。利用頻度が高くないと判断（2026-11-09決定）。アプリは地図なしで、走行画面・設定画面で構成する
+- 保持データは県単位・地方単位でダウンロードと削除ができる。既定は「Wi-Fi接続時のみ」。設定画面に合計容量と地方ごとの容量を横棒グラフで表示する（2026-11-09決定）
+- 優待：アプリ独自のクーポンで有料機能を解放することはApp Store審査ガイドライン3.1.1で禁止。使うならApple Offer Codes／Google Playプロモーションコード（期間限定の割引・無料）。特定の人への無料提供は見送り（2026-11-09決定）
 - データは毎日 `opendata.json` で更新を検知し、自動ビルド → 検証ゲート → R2配信（manifest.json）→ アプリ起動時に差分取得
 - 配信URL：開発中はR2のr2.dev公開URL（本番非推奨・レート制限あり）。正式リリース時に新規ドメイン（候補 `limes-app.com`、お名前.comで取得）のネームサーバーをCloudflare無料プランに向け、R2のカスタムドメインにする。osprey74.comはお名前.com管理のまま触らない（Cloudflareで他社DNSのサブドメインを使うにはBusiness以上が必要なため）。アプリは配信URLを設定値で持ち、差し替えられるようにする（2026-11-09決定）
-- 地図はMapLibre Native。速度線はパイプライン（`limes-cli tiles`）で県別PMTilesにして重ねる。タイルの地物にIDは持たせず、タップした道路の情報はアプリが端末内のDBから引く（2026-11-09決定）
+- 速度マップを搭載しないため、速度線タイル（PMTiles）は作らない。2026-11-09に一度作ったが同日に取り止め（コードはgit履歴 db24e79 にある）
 
 ## データの注意点（Phase 0で判明）
 

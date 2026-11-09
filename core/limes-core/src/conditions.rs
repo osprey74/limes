@@ -49,7 +49,7 @@ pub struct DriveTime {
 }
 
 impl DriveTime {
-    /// Weekday noon, used where no real time is known (e.g. the speed map tiles).
+    /// Weekday noon, used where no real time is known (e.g. the decision baked into the database).
     pub const REPRESENTATIVE: DriveTime = DriveTime {
         month: 6,
         day: 10,
