@@ -67,6 +67,20 @@ def road_id(way: "Way") -> tuple[str, str]:
     return (base, "ref:" + ref) if ref else (base, "name:" + way.tags.get("name", ""))
 
 
+def shared_length(line, area) -> float:
+    """Length of `line` inside `area`. GEOS can reject a union of buffers as
+    invalid (TopologyException, seen in Akita); then the repaired shapes,
+    and last the shapes snapped to a 1 cm grid (all in metres), do."""
+    try:
+        return line.intersection(area).length
+    except shapely.errors.GEOSException:
+        pass
+    try:
+        return shapely.make_valid(line).intersection(shapely.make_valid(area)).length
+    except shapely.errors.GEOSException:
+        return shapely.intersection(line, area, grid_size=0.01).length
+
+
 # A JARTIC line goes to another road instead when that road is this much
 # closer on average (metres) and at most this share of the distance.
 COMPETITOR_MARGIN_M = 3.0
@@ -281,7 +295,7 @@ class Matcher:
         primary = max(covered, key=lambda rid: covered[rid].length)
         main = covered[primary].buffer(1.0)
         return [rid for rid, g in covered.items()
-                if rid != primary and g.intersection(main).length > 0.5 * g.length]
+                if rid != primary and shared_length(g, main) > 0.5 * g.length]
 
     def closer_road(self, way: Way, piece: LineString, line_m: LineString, search, to_m) -> bool:
         """True when another road follows this stretch of the JARTIC line

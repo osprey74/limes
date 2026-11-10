@@ -110,6 +110,18 @@ def test_month_over_month_change(tmp_path):
     ]
 
 
+def test_accept_stage1_lets_only_the_stage1_change_pass(tmp_path):
+    rows = [make_row(f"k{i}", "112") for i in range(300)]
+    csv_stats, db_stats = build(tmp_path, rows, stages=[1] * 300 + [7] * 700)
+    previous = {"jartic": csv_stats, "db": db_stats}
+
+    csv_stats, db_stats = build(tmp_path, rows[:269], stages=[1] * 200 + [7] * 800)
+    checks = gate.evaluate("hokkaido", csv_stats, db_stats, previous, accept_stage1=True)
+    assert failures(checks) == ["JARTIC rows", "code 112"]
+    stage1 = next(c for c in checks if c.name == "segments at stage 1 (regulated)")
+    assert "accepted" in stage1.detail
+
+
 def test_small_counts_use_the_floor():
     assert gate._change("x", 25, 5).ok
     assert not gate._change("x", 26, 5).ok

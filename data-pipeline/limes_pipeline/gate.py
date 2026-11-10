@@ -100,7 +100,10 @@ def evaluate(
     db: dict,
     previous: dict | None,
     release_meta: dict | None = None,
+    accept_stage1: bool = False,
 ) -> list[Check]:
+    """`accept_stage1` lets a change of the stage-1 count pass once, for a
+    rebuild after the pipeline itself changed how regulations are assigned."""
     checks = [
         Check(
             "header columns",
@@ -155,13 +158,14 @@ def evaluate(
             _change(f"code {code}", csv["codes"][code], prev_csv.get("codes", {}).get(code))
         )
     checks.append(_change("segments", db["segments"], prev_db.get("segments")))
-    checks.append(
-        _change(
-            "segments at stage 1 (regulated)",
-            db["stages"].get("1", 0),
-            prev_db["stages"].get("1", 0) if prev_db else None,
-        )
+    stage1 = _change(
+        "segments at stage 1 (regulated)",
+        db["stages"].get("1", 0),
+        prev_db["stages"].get("1", 0) if prev_db else None,
     )
+    if accept_stage1 and not stage1.ok:
+        stage1 = Check(stage1.name, True, stage1.detail + "; accepted for this run (pipeline change)")
+    checks.append(stage1)
     return checks
 
 
@@ -193,6 +197,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limes-cli", type=Path, help="run the golden decision cases with it")
     parser.add_argument("--stats-out", type=Path, required=True, help="stats of this build")
     parser.add_argument("--report", type=Path, help="Markdown report (default: stdout)")
+    parser.add_argument("--accept-stage1", action="store_true",
+                        help="let the stage-1 change pass (rebuild after a pipeline change)")
     args = parser.parse_args(argv)
 
     csv = jartic_stats(args.csv)
@@ -204,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.release_meta:
         release_meta = json.loads(args.release_meta.read_text(encoding="utf-8"))
 
-    checks = evaluate(args.prefecture, csv, db, previous, release_meta)
+    checks = evaluate(args.prefecture, csv, db, previous, release_meta, args.accept_stage1)
     if args.limes_cli:
         checks.append(golden(args.limes_cli))
 

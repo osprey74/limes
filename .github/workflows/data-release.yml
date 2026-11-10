@@ -24,6 +24,10 @@ on:
         description: Prefectures to build, space separated (default all in prefectures.json)
         type: string
         default: ""
+      accept_stage1:
+        description: Let the gate pass a stage-1 change, once (rebuild after a pipeline change)
+        type: boolean
+        default: false
 
 concurrency:
   group: data-release
@@ -151,6 +155,7 @@ jobs:
           uv run python scripts/release.py build --region ${{ matrix.region }}
           --boundaries data/work/osm/japan.boundaries.geojson
           --published data/published --dist data/dist --limes-cli ../core/target/release/limes-cli
+          ${{ inputs.accept_stage1 && '--accept-stage1' || '' }}
 
       - uses: actions/upload-artifact@v4
         with:

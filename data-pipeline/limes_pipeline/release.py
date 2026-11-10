@@ -170,6 +170,7 @@ def build_one(
     work: Path,
     limes_cli: Path,
     now: datetime,
+    accept_stage1: bool = False,
 ) -> tuple[bool, str]:
     """Build, gate and package one prefecture. Returns (passed, gate report)."""
     raw = work / "raw"
@@ -212,6 +213,7 @@ def build_one(
         "--limes-cli", str(limes_cli),
         "--stats-out", str(stats),
         "--report", str(report),
+        *(["--accept-stage1"] if accept_stage1 else []),
     ])
     report_text = report.read_text(encoding="utf-8")
     if code != 0:
@@ -286,6 +288,7 @@ def cmd_build(args: argparse.Namespace) -> int:
                     args.work,
                     args.limes_cli,
                     now,
+                    args.accept_stage1,
                 )
             except Exception as e:  # one prefecture's failure must not stop the others
                 ok, report = False, _error_report(prefecture, e)
@@ -389,6 +392,8 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--work", type=Path, default=Path("data/work"))
     b.add_argument("--limes-cli", type=Path, required=True)
     b.add_argument("--region", help="only the planned prefectures of this OSM region")
+    b.add_argument("--accept-stage1", action="store_true",
+                   help="let the gate pass a stage-1 change (rebuild after a pipeline change)")
     b.add_argument("--boundaries", type=Path,
                    help="prefecture boundaries from the Japan extract (scripts/boundaries.py)")
     b.set_defaults(func=cmd_build)

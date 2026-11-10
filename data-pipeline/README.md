@@ -78,7 +78,7 @@ The gate fails the build when any of these does not hold (thresholds in `limes_p
 | JARTIC format | 170 header columns, no short rows, every row version `k_2.1`, no undecodable bytes, no duplicate unique keys (all 47 prefectures met these in the 2026-09 release) |
 | Speed regulations | At least one 112 row; missing, unparsable, out-of-Japan or one-point coordinates in at most 1% of them |
 | Database | Meta `prefecture` matches, `version` is set, `jartic_month` equals the release's target month; at least one segment |
-| Month over month | JARTIC rows, codes 112/114/15/17/20, segments and stage-1 segments each within ±10% of the last published build (±20 for small counts); skipped on the first build |
+| Month over month | JARTIC rows, codes 112/114/15/17/20, segments and stage-1 segments each within ±10% of the last published build (±20 for small counts); skipped on the first build. After a pipeline change that moves the stage-1 count on purpose, one run with `--accept-stage1` (workflow input `accept_stage1`) lets that check pass; its stats become the next baseline |
 | Decisions | `limes-cli golden` passes |
 
 The stats written by `--stats-out` are published with the build and become `--previous` for the next one.
@@ -87,7 +87,7 @@ The stats written by `--stats-out` are published with the build and become `--pr
 
 ## Daily release job
 
-`.github/workflows/data-release.yml` runs every day at 06:30 JST (and by hand with `force` / `only`) in three jobs:
+`.github/workflows/data-release.yml` runs every day at 06:30 JST (and by hand with `force` / `only` / `accept_stage1`) in three jobs:
 
 ```sh
 # plan: which prefectures to build, grouped by OSM region
