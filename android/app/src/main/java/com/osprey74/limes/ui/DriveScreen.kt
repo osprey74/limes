@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +67,9 @@ import kotlinx.coroutines.delay
 
 private const val STALE_MS = 5_000L
 private val SignRed = Color(0xFFD7262E)
+
+/** The ring when the confidence is low: the same red, faded toward white. */
+private val SignRedFaded = Color(0xFFEB9297)
 private val SignBlue = Color(0xFF1D4E9E)
 
 private const val DISCLAIMER_SHORT = "表示される速度は公開データからの推定です。実際の最高速度は現地の標識・標示に従ってください。"
@@ -171,7 +173,7 @@ private fun LimitPanel(state: DriveState, stale: Boolean, sign: Dp, note: String
             color = Palette.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             maxLines = 1,
         )
-        SpeedSign(road?.speedKmh?.toInt(), dashed = road?.confidence == Confidence.LOW, size = sign)
+        SpeedSign(road?.speedKmh?.toInt(), faded = road?.confidence == Confidence.LOW, size = sign)
         ConfidencePill(road)
         if (note != null) Text(note, color = Palette.Waiting, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
@@ -184,9 +186,9 @@ private fun roadLabel(road: RoadSpeed): String = when {
     else -> "道路名なし"
 }
 
-/** The regulatory sign: white disc, red ring (dashed when the confidence is low), blue figures. */
+/** The regulatory sign: white disc, red ring (faded when the confidence is low), blue figures. */
 @Composable
-private fun SpeedSign(speed: Int?, dashed: Boolean, size: Dp) {
+private fun SpeedSign(speed: Int?, faded: Boolean, size: Dp) {
     val ring = size * (20f / 220f)
     val figure = with(LocalDensity.current) { (size * if (speed != null && speed >= 100) 0.40f else 0.47f).toSp() }
     Box(
@@ -198,13 +200,14 @@ private fun SpeedSign(speed: Int?, dashed: Boolean, size: Dp) {
                 val radius = this.size.minDimension / 2 - stroke / 2
                 if (speed != null) drawCircle(Color.White, radius = this.size.minDimension / 2)
                 drawCircle(
-                    color = if (speed != null) SignRed else Palette.Border,
+                    color = when {
+                        speed == null -> Palette.Border
+                        faded -> SignRedFaded
+                        else -> SignRed
+                    },
                     radius = radius,
                     center = Offset(this.size.width / 2, this.size.height / 2),
-                    style = Stroke(
-                        width = stroke,
-                        pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(stroke * 1.2f, stroke * 0.8f)) else null,
-                    ),
+                    style = Stroke(width = stroke),
                 )
             },
         contentAlignment = Alignment.Center,

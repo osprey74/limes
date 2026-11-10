@@ -6,5 +6,11 @@
         <item name="android:statusBarColor">@color/ground</item>
         <item name="android:navigationBarColor">@color/ground</item>
     </style>
+    <!-- The system's launch window: the icon alone (it can hold no text). -->
+    <style name="Theme.Limes.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Limes</item>
+    </style>
     <color name="ground">#0B0D10</color>
 </resources>

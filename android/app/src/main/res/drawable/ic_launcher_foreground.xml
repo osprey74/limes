@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gauge (design canvas, option C). Drawn on the 108 adaptive-icon grid; the
+     launcher shows the inner 72, and the splash screen the same circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M37.03,74.97 A24,24 0 1,1 70.97,74.97"
+        android:strokeColor="#4A525E"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M37.03,74.97 A24,24 0 0,1 54,34"
+        android:strokeColor="#34D3B8"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M66.73,45.27 L75.21,36.79"
+        android:strokeColor="#D7262E"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,58 L47.84,41.08"
+        android:strokeColor="#F2F4F7"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M50,58 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:fillColor="#F2F4F7" />
+</vector>
