@@ -93,3 +93,43 @@ def test_boundary_geojson_round_trip(tmp_path):
     assert boundary.read(tmp_path / "b.geojson", "JP-04").equals(square)
     with pytest.raises(LookupError, match="JP-04"):
         boundary.read(tmp_path / "b.geojson", "JP-05")
+
+
+# Metres east of ROAD in degrees of longitude at 43.09°N.
+def east(m):
+    return m / (111_320 * 0.7302)
+
+
+def shifted(m):
+    return [(lon + east(m), lat) for lon, lat in ROAD]
+
+
+def test_regulation_stays_on_the_road_it_follows():
+    # An elevated expressway's 80 km/h line, 1 m off it; the road beneath runs
+    # 10 m away, inside the match buffer.
+    expressway = Way(1, "motorway", {"name": "札樽自動車道"}, ROAD)
+    beneath = Way(2, "trunk", {"name": "札幌新道"}, shifted(10))
+    out = run([regulation("112", 80, lines=[shifted(1)])], [expressway, beneath])
+    speeds = {(s["osm_id"], tuple(r["speed"] for r in s["regulations"])) for s in out}
+    assert speeds == {(1, (80,)), (2, ())}
+
+
+def test_both_carriageways_of_one_road_keep_the_regulation():
+    # A line drawn down the middle of a divided road: 8 m to either side.
+    up = Way(1, "trunk", {"name": "札幌新道", "oneway": "yes"}, shifted(-8))
+    down = Way(2, "trunk", {"name": "札幌新道", "oneway": "yes"}, shifted(8)[::-1])
+    out = run([regulation("112", 60, lines=[ROAD])], [up, down])
+    assert all(s["regulations"] and s["regulations"][0]["speed"] == 60 for s in out)
+    assert {s["osm_id"] for s in out} == {1, 2}
+
+
+def test_coarse_line_straying_over_the_road_beneath_stays_on_its_road():
+    # The line follows the expressway but its middle third lies over the road
+    # beneath (1 m from it), as JARTIC's coarse lines do in Sapporo.
+    expressway = Way(1, "motorway", {"name": "札樽自動車道", "ref": "5"}, ROAD)
+    beneath = Way(2, "trunk", {"name": "札幌新道", "ref": "5"}, shifted(10))
+    line = [(141.35 + east(1), 43.0900), (141.35 + east(1), 43.0914), (141.35 + east(9), 43.0916),
+            (141.35 + east(9), 43.0924), (141.35 + east(1), 43.0926), (141.35 + east(1), 43.0940)]
+    out = run([regulation("112", 80, lines=[line])], [expressway, beneath])
+    assert all(s["regulations"] for s in out if s["osm_id"] == 1)
+    assert not any(s["regulations"] for s in out if s["osm_id"] == 2)

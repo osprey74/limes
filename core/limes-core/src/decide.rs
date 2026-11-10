@@ -87,17 +87,14 @@ pub enum CenterEvidence {
     OsmLanes,
     /// Center line detected on GSI aerial photos (two-way roads only)
     AerialPhoto,
-    /// Center line seen by the device camera (Phase 3)
-    Camera,
 }
 
 impl CenterEvidence {
     pub fn confidence(self) -> Confidence {
         match self {
-            Self::JarticCenterLine
-            | Self::JarticLanes
-            | Self::JarticNoOvertaking
-            | Self::Camera => Confidence::High,
+            Self::JarticCenterLine | Self::JarticLanes | Self::JarticNoOvertaking => {
+                Confidence::High
+            }
             // Aerial photos can be years old; OSM tags are unverified.
             Self::OsmLaneMarkings | Self::OsmLanes | Self::AerialPhoto => Confidence::Mid,
         }
@@ -111,7 +108,6 @@ impl CenterEvidence {
             Self::OsmLaneMarkings => "OSM lane_markings=yes",
             Self::OsmLanes => "OSM lanes>=2",
             Self::AerialPhoto => "航空写真で中央線を検出",
-            Self::Camera => "カメラで中央線を検出",
         }
     }
 }
