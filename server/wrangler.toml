@@ -1,0 +1,11 @@
+name = "limes-trial"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+TRIAL_DAYS = "14"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "limes-trial"
+database_id = "4e1f8a67-574e-48d4-9404-561565d196d9"

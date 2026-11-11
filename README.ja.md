@@ -16,6 +16,7 @@ Limes は、走行中の道路の最高速度を公開データから推定し�
 | `ios/` | iOS アプリ（Swift／SwiftUI） |
 | `android/` | Android アプリ（Kotlin／Jetpack Compose） |
 | `data-pipeline/` | Python パイプライン：JARTIC・OSM・国土地理院データの取り込み |
+| `server/` | 無料期間の記録（Cloudflare Workers＋D1） |
 | `docs/` | 設計メモ、データ検証レポート |
 
 ## データ出典

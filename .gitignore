@@ -29,7 +29,14 @@ android/**/build/
 android/.gradle/
 android/local.properties
 android/.kotlin/
+android/app/release/
+*.jks
+*.keystore
 *.so
+
+# Cloudflare Worker
+server/node_modules/
+server/.wrangler/
 
 # OS / editor
 .DS_Store
