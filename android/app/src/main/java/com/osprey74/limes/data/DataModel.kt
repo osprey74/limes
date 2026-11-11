@@ -1,6 +1,7 @@
 package com.osprey74.limes.data
 
 import com.osprey74.limes.LimesApp
+import com.osprey74.limes.access.entitled
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,9 +49,14 @@ class DataModel(private val app: LimesApp) {
         }
     }
 
-    /** Keep these prefectures and fetch them (on Wi-Fi only when so set). */
+    /**
+     * Keep these prefectures and fetch them (on Wi-Fi only when so set). The
+     * first download starts the free trial; after it, downloads need access.
+     */
     fun download(slugs: Collection<String>) {
         app.scope.launch {
+            if (!app.access.current().entitled) return@launch
+            app.access.startTrial()
             app.settings.select(slugs, keep = true)
             checkNow()
         }
@@ -63,6 +69,13 @@ class DataModel(private val app: LimesApp) {
             slugs.forEach { runCatching { app.engine.removePrefecture(it) } }
             refreshInstalled()
         }
+    }
+
+    /** Drops every kept prefecture (access ended). */
+    suspend fun removeAll() {
+        app.settings.select(app.settings.selected.first(), keep = false)
+        _installed.value.forEach { runCatching { app.engine.removePrefecture(it.slug) } }
+        refreshInstalled()
     }
 
     suspend fun checkNow() {

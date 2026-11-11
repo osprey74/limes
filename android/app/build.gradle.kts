@@ -21,6 +21,8 @@ android {
         // Where manifest.json and the databases are published. r2.dev while in
         // development; the release domain (limes-app.com) replaces it.
         buildConfigField("String", "DATA_BASE_URL", "\"https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/\"")
+        // Records when each device started its free trial (server/).
+        buildConfigField("String", "TRIAL_URL", "\"https://limes-trial.osprey74.workers.dev/v1/trial\"")
     }
 
     buildTypes {
@@ -29,7 +31,9 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
-            applicationIdSuffix = ".debug"
+            // -PbillingTest keeps the Play package name: license testers can
+            // then test purchases with a sideloaded debug build.
+            if (!project.hasProperty("billingTest")) applicationIdSuffix = ".debug"
         }
     }
     compileOptions {
@@ -90,6 +94,7 @@ tasks.named("preBuild") { dependsOn(uniffiBindings) }
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.play.billing)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

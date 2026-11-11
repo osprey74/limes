@@ -49,6 +49,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.osprey74.limes.BuildConfig
 import com.osprey74.limes.LimesApp
+import com.osprey74.limes.access.AccessState
 import com.osprey74.limes.data.Installed
 import com.osprey74.limes.data.Published
 import com.osprey74.limes.data.REGIONS
@@ -72,7 +73,7 @@ const val ATTRIBUTION =
         "祝日：内閣府「国民の祝日について」に基づき計算"
 
 @Composable
-fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit) {
+fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit, onSubscribe: () -> Unit) {
     val scope = rememberCoroutineScope()
     val installed by app.data.installed.collectAsState()
     val published by app.data.published.collectAsState()
@@ -82,6 +83,7 @@ fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit) {
     val autoAdd by app.settings.autoAddCurrent.collectAsState(initial = true)
     val keepAwake by app.settings.keepAwake.collectAsState(initial = true)
     val lastChecked by app.settings.lastChecked.collectAsState(initial = 0L)
+    val access by app.access.state.collectAsState()
     val work by remember(lastUpdate) {
         lastUpdate?.let { WorkManager.getInstance(app).getWorkInfoByIdFlow(it) } ?: flowOf(null)
     }.collectAsState(initial = null)
@@ -109,6 +111,13 @@ fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             BackButton("走行画面", onBack)
             Text("設定", color = Palette.Text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Section("有料プラン") {
+            CardRow(first = true, onClick = onSubscribe) {
+                Text(planLabel(access), color = Palette.Text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                Text("詳しく", color = Palette.Muted, fontSize = 14.sp)
+            }
         }
 
         Section("データの更新") {
@@ -165,6 +174,17 @@ fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit) {
 
         Text(DISCLAIMER, color = Palette.Muted, fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
     }
+}
+
+private fun planLabel(access: AccessState?): String = when (access) {
+    AccessState.NotStarted -> "無料期間（最初のダウンロードから14日間）"
+    is AccessState.Trial -> {
+        val date = Instant.ofEpochMilli(access.ends).atZone(ZoneId.of("Asia/Tokyo")).format(DateTimeFormatter.ofPattern("M月d日"))
+        "無料期間中（${date}まで）"
+    }
+    AccessState.Subscribed -> "登録済み"
+    AccessState.Expired -> "無料期間終了（未登録）"
+    null -> "確認しています…"
 }
 
 private fun checkedLabel(millis: Long): String {

@@ -2,6 +2,9 @@ package com.osprey74.limes
 
 import android.app.Application
 import android.util.Log
+import com.osprey74.limes.access.Access
+import com.osprey74.limes.access.Billing
+import com.osprey74.limes.access.TrialClient
 import com.osprey74.limes.core.Engine
 import com.osprey74.limes.data.DataModel
 import com.osprey74.limes.data.DataServer
@@ -21,6 +24,9 @@ class LimesApp : Application() {
     val server: DataServer by lazy { DataServer(BuildConfig.DATA_BASE_URL, filesDir) }
     val data: DataModel by lazy { DataModel(this) }
     val drive: DriveModel by lazy { DriveModel(this) }
+    val trial: TrialClient by lazy { TrialClient(BuildConfig.TRIAL_URL, this) }
+    val billing: Billing by lazy { Billing(this) }
+    val access: Access by lazy { Access(this) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -32,6 +38,7 @@ class LimesApp : Application() {
         }
         data.refreshInstalled()
         scope.launch {
+            access.refresh()
             if (settings.autoUpdate.first()) {
                 data.checkNow()
             }

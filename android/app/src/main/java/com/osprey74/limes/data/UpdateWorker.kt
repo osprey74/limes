@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.osprey74.limes.LimesApp
+import com.osprey74.limes.access.entitled
 import com.osprey74.limes.core.LimesException
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit
 class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val app = applicationContext as LimesApp
+        if (!app.access.current().entitled) return Result.success()
         val selected = app.settings.selected.first()
         if (selected.isEmpty()) return Result.success()
         val manifest = try {

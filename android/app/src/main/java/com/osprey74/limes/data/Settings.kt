@@ -20,7 +20,32 @@ class Settings(private val context: Context) {
         val lastChecked = longPreferencesKey("last_checked")
         val autoAddCurrent = booleanPreferencesKey("auto_add_current")
         val keepAwake = booleanPreferencesKey("keep_awake")
+        val trialEnds = longPreferencesKey("trial_ends")
+        val trialConfirmed = booleanPreferencesKey("trial_confirmed")
+        val lastSubscribed = longPreferencesKey("last_subscribed")
+        val dataRemovedNotice = booleanPreferencesKey("data_removed_notice")
     }
+
+    /** Epoch millis when the free trial ends, 0 before the first download. */
+    val trialEnds: Flow<Long> = context.dataStore.data.map { it[Keys.trialEnds] ?: 0L }
+
+    /** False while the trial end is the device's own count (server/ not reached yet). */
+    val trialConfirmed: Flow<Boolean> = context.dataStore.data.map { it[Keys.trialConfirmed] ?: false }
+
+    /** Epoch millis when an active subscription was last seen, 0 when never. */
+    val lastSubscribed: Flow<Long> = context.dataStore.data.map { it[Keys.lastSubscribed] ?: 0L }
+
+    /** The kept databases were deleted at the end of access; say so once. */
+    val dataRemovedNotice: Flow<Boolean> = context.dataStore.data.map { it[Keys.dataRemovedNotice] ?: false }
+
+    suspend fun setTrial(ends: Long, confirmed: Boolean) = context.dataStore.edit {
+        it[Keys.trialEnds] = ends
+        it[Keys.trialConfirmed] = confirmed
+    }
+
+    suspend fun setLastSubscribed(millis: Long) = context.dataStore.edit { it[Keys.lastSubscribed] = millis }
+
+    suspend fun setDataRemovedNotice(on: Boolean) = context.dataStore.edit { it[Keys.dataRemovedNotice] = on }
 
     /** Add the prefecture the car is in and its neighbours (default on). */
     val autoAddCurrent: Flow<Boolean> = context.dataStore.data.map { it[Keys.autoAddCurrent] ?: true }

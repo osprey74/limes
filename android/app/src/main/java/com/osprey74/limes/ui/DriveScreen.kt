@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.osprey74.limes.LimesApp
+import com.osprey74.limes.access.entitled
 import com.osprey74.limes.core.Confidence
 import com.osprey74.limes.core.RoadSpeed
 import com.osprey74.limes.data.versionLabel
@@ -75,7 +76,7 @@ private val SignBlue = Color(0xFF1D4E9E)
 private const val DISCLAIMER_SHORT = "表示される速度は公開データからの推定です。実際の最高速度は現地の標識・標示に従ってください。"
 
 @Composable
-fun DriveScreen(app: LimesApp, onSettings: () -> Unit) {
+fun DriveScreen(app: LimesApp, onSettings: () -> Unit, onSubscribe: () -> Unit) {
     val context = LocalContext.current
     var permitted by remember {
         mutableStateOf(
@@ -106,6 +107,8 @@ fun DriveScreen(app: LimesApp, onSettings: () -> Unit) {
     }
 
     val state by app.drive.state.collectAsState()
+    val access by app.access.state.collectAsState()
+    val locked = access?.entitled == false
     val installed by app.data.installed.collectAsState()
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(Unit) {
@@ -131,7 +134,7 @@ fun DriveScreen(app: LimesApp, onSettings: () -> Unit) {
         }
     }
     val limit: @Composable (Dp) -> Unit = { sign ->
-        LimitPanel(
+        if (locked) LockedPanel(onSubscribe) else LimitPanel(
             state = state,
             stale = stale,
             sign = sign,
@@ -161,6 +164,20 @@ fun DriveScreen(app: LimesApp, onSettings: () -> Unit) {
             color = Palette.Muted, fontSize = 12.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp),
         )
+    }
+}
+
+/** In place of the sign when there is no access; opening the plans is up to the driver. */
+@Composable
+private fun LockedPanel(onSubscribe: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.padding(horizontal = 32.dp),
+    ) {
+        Text("最高速度の表示は有料プランの機能です", color = Palette.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("無料期間が終わりました。現在の速度はこのまま表示されます。", color = Palette.Muted, fontSize = 14.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
+        FlatButton("有料プランを見る", onClick = onSubscribe)
     }
 }
 

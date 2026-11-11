@@ -37,6 +37,8 @@ data class DriveState(
     val speedKmh: Int? = null,
     val gps: GpsQuality = GpsQuality.None,
     val fixAt: Long = 0L,
+    /** No access (trial over, no subscription): only the speed is shown. */
+    val locked: Boolean = false,
 )
 
 /**
@@ -75,14 +77,16 @@ class DriveModel(private val app: LimesApp) {
         val speed = if (loc.hasSpeed()) loc.speed.toDouble() else null
         // Heading is noise when standing still; matching then relies on distance.
         val heading = if (loc.hasBearing() && (speed ?: 0.0) >= MIN_HEADING_SPEED) loc.bearing.toDouble() else null
-        val road = app.engine.locate(GpsFix(loc.longitude, loc.latitude, heading, speed), time)
+        val locked = !app.access.entitled()
+        val road = if (locked) null else app.engine.locate(GpsFix(loc.longitude, loc.latitude, heading, speed), time)
         _state.value = DriveState(
             road = road,
             speedKmh = speed?.let { (it * 3.6).roundToInt() },
             gps = quality(loc),
             fixAt = SystemClock.elapsedRealtime(),
+            locked = locked,
         )
-        maybeAddCurrentPrefecture(loc)
+        if (!locked) maybeAddCurrentPrefecture(loc)
     }
 
     private fun quality(loc: Location): GpsQuality = when {

@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.osprey74.limes.LimesApp
+import com.osprey74.limes.access.entitled
 import com.osprey74.limes.data.PREFECTURES
 import com.osprey74.limes.data.Prefecture
 import com.osprey74.limes.data.Published
@@ -64,6 +65,7 @@ fun DownloadScreen(app: LimesApp, onBack: () -> Unit) {
     val published by app.data.published.collectAsState()
     val installed by app.data.installed.collectAsState()
     val wifiOnly by app.settings.wifiOnly.collectAsState(initial = true)
+    val access by app.access.state.collectAsState()
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var open by remember { mutableStateOf<String?>(null) }
     val held = installed.map { it.slug }.toSet()
@@ -86,6 +88,13 @@ fun DownloadScreen(app: LimesApp, onBack: () -> Unit) {
             Text(
                 "走行する地域のデータを端末に保存します。保存したデータで判定するので、走行中は通信しません。",
                 color = Palette.Sub, fontSize = 14.sp, lineHeight = 23.sp,
+            )
+        }
+
+        if (access?.entitled == false) {
+            Text(
+                "無料期間が終わったため、ダウンロードできません。設定の「有料プラン」から登録できます。",
+                color = Palette.Waiting, fontSize = 14.sp, lineHeight = 22.sp,
             )
         }
 
