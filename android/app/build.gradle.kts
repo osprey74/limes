@@ -19,7 +19,7 @@ android {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
         // Where manifest.json and the databases are published. r2.dev while in
-        // development; the release domain (limes-app.com) replaces it.
+        // development; limes.osprey74.app replaces it for release.
         buildConfigField("String", "DATA_BASE_URL", "\"https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/\"")
         // Records when each device started its free trial (server/).
         buildConfigField("String", "TRIAL_URL", "\"https://limes-trial.osprey74.workers.dev/v1/trial\"")
