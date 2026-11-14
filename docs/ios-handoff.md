@@ -143,7 +143,7 @@ POST https://limes-trial.osprey74.workers.dev/v1/trial
 ## 8. 課金（StoreKit 2）
 
 - Android版の商品：定期購入 `premium`、基本プラン `monthly`（1か月）・`yearly`（1年）。ストアの無料体験（お試しオファー）は付けない（無料期間はアプリ側）
-- iOS では、サブスクリプショングループ1つに月額・年額の2つのプロダクトを作る。プロダクト ID は未決定（例：`com.osprey74.limes.premium.monthly`／`.yearly`）。価格は App Store Connect で設定し、アプリには書かない（ストアから受け取る）
+- iOS では、サブスクリプショングループ1つに月額・年額の2つのプロダクトを作る。プロダクト ID は `com.osprey74.limes.premium.monthly` と `com.osprey74.limes.premium.yearly`（2026-11-15決定）。価格は App Store Connect で設定し、アプリには書かない（ストアから受け取る）
 - 価格ポイントに望みの金額があるかは App Store Connect で確かめる（未確認）
 - 有料プラン画面（`…/ui/SubscribeScreen.kt`）：状態（無料期間の残り日数と終了日／終了／登録済み）、できること（最高速度の表示、データのダウンロードと自動更新）、「登録しなくても、GPS による現在の速度はいつでも表示されます」、月額・年額と登録ボタン（年額は「月あたり◯円（月額の12か月分より◯%お得）」をストアの価格から計算）、自動更新と解約方法の説明、「定期購入を管理」（iOS は `showManageSubscriptions` か App Store の管理画面）
 - 「購入を復元」ボタンは App Store では必要とされることが多い（審査ガイドライン 3.1.1 の扱いは要確認）。StoreKit 2 なら `AppStore.sync()`
