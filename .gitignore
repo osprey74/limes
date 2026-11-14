@@ -23,6 +23,7 @@ target/
 ios/**/xcuserdata/
 ios/**/DerivedData/
 *.xcframework
+ios/Limes/Generated/
 
 # Android
 android/**/build/

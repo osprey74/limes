@@ -7,7 +7,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 | パス | 内容 | 状態 |
 | --- | --- | --- |
 | `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFI・更新管理まで） |
-| `ios/` | Swift / SwiftUI、StoreKit 2 | 未着手。Android版の動作は `docs/ios-handoff.md` にまとめてある |
+| `ios/` | Swift / SwiftUI、StoreKit 2 | Xcodeプロジェクト（`ios/Limes.xcodeproj`）がRustコアを組み込んで起動するところまで。画面は未実装。Android版の動作は `docs/ios-handoff.md` にまとめてある。Android版で直す項目は `docs/android-handoff.md` |
 | `android/` | Kotlin / Jetpack Compose、Play Billing | 走行・設定・ダウンロード画面、データ更新、アイコン・起動画面、無料期間と Play Billing（定期購入 `premium`：`monthly`・`yearly`）まで |
 | `server/` | Cloudflare Workers＋D1。無料期間の開始日の記録（`POST /v1/trial`） | limes-trial.osprey74.workers.dev にデプロイ済み |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |
@@ -67,6 +67,12 @@ uv sync
 uv run pytest
 uv run python scripts/fetch_jartic.py hokkaido --out-dir data/raw
 uv run python scripts/inspect_jartic.py data/raw/typeD_hokkaido.csv --meta data/raw/typeD_hokkaido.meta.json --out ../docs/phase0/jartic-hokkaido-202609.md
+```
+
+```sh
+cd ios
+scripts/build-core.sh   # Rustコアのxcframeworkと Swift バインディング。Xcodeで開く前と core/ を変えたあとに実行
+open Limes.xcodeproj
 ```
 
 ## 規約
