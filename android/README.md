@@ -1,6 +1,6 @@
 # android
 
-Android app (Kotlin / Jetpack Compose, Play Billing). Phase 2: the project builds and loads the Rust core; the driving, settings and download screens come next.
+Android app (Kotlin / Jetpack Compose, Play Billing): the launch, driving, settings, download and plans screens, data updates (WorkManager), the free trial (recorded by `server/`) and the Play subscription (`premium`: `monthly`, `yearly`). The Rust core does every decision. What the app does, screen by screen, is written up for the iOS port in `../docs/ios-handoff.md`.
 
 | Item | Value |
 | --- | --- |

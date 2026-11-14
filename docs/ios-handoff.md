@@ -26,12 +26,15 @@ cargo build --release -p limes-ffi --target aarch64-apple-ios-sim
 cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
   --library target/aarch64-apple-ios/release/liblimes_ffi.a \
   --language swift --out-dir <出力先>
+# （--no-format を付ける。付けないと整形ツールの呼び出しで止まることがあった）
 # 出力の LimesCoreFFI.h と modulemap を headers に置き、
 # xcodebuild -create-xcframework -library … -headers … で LimesCore.xcframework にまとめる
 ```
 
-- Android版はこれを Gradle のタスク（`android/app/build.gradle.kts` の `cargoNdk`・`uniffiBindings`）にしてビルドの前に自動で走らせている。iOS版もスクリプト化し、Xcode のビルド前フェーズか手動の手順にする。`*.xcframework` は `.gitignore` 済み
-- 上の `--library` に `.a` を渡せるかは未確認（Android版は `.so` を渡している）。通らなければ `cdylib` の `.dylib` をホスト向けにビルドして渡す
+- Android版はこれを Gradle のタスク（`android/app/build.gradle.kts` の `cargoNdk`・`uniffiBindings`）にしてビルドの前に自動で走らせている。iOS版は `ios/scripts/build-core.sh` にまとめてあり、Xcode で開く前と `core/` を変えたあとに手で実行する。出力（`ios/Frameworks/LimesCore.xcframework`、`ios/Limes/Generated/LimesCore.swift`）はコミットしない
+- `--library` には `.a` を渡せる（2026-11-14 確認）
+- ビルド時に `IPHONEOS_DEPLOYMENT_TARGET` をアプリの対応バージョンに合わせる。指定しないと、C の部分（SQLite・zstd）が SDK のバージョン向けに、Rust が既定のバージョン向けにビルドされ、リンクに失敗する（スクリプトで指定済み）
+- `cargo` は `~/.cargo/bin` にあり、Xcode やログインシェル以外の PATH には入っていない（スクリプトで PATH に足している）
 
 ### API（`core/limes-ffi/src/lib.rs`）
 
@@ -42,10 +45,11 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 | `localTime(year, month, day, hour, minute)` | 測位ごと | 日本時間（Asia/Tokyo）の日時から曜日・祝日を計算して返す |
 | `locate(fix, time)` | 測位ごと | `GpsFix(lon, lat, heading, speedMps)`。道路が見つからなければ nil（「不明」） |
 | `planUpdates(manifestJson, prefectures)` | 更新の確認 | `downloads`・`upToDate`・`appUpdateRequired`・`notPublished` |
-| `installUpdate(download, filePath)` | ダウンロード後 | サイズ・sha256・展開後サイズ・メタを検証して切り替え。旧版は消える。合わなければ `DownloadMismatch` |
+| `installUpdate(download, file)` | ダウンロード後 | サイズ・sha256・展開後サイズ・メタを検証して切り替え。旧版は消える。合わなければ `DownloadMismatch` |
 | `installedDatabases()` | 設定画面 | 県・版・容量 |
-| `removePrefecture(slug)` | 削除 | 閉じてから消す |
+| `removePrefecture(prefecture)` | 削除 | 引数は県の slug。閉じてから消す |
 
+- Swift では引数名がそのままラベルになる：`openStore(dir:)`、`localTime(year:month:day:hour:minute:)`、`locate(fix:time:)`、`planUpdates(manifestJson:prefectures:)`、`installUpdate(download:file:)`、`removePrefecture(prefecture:)`
 - `locate` は SQLite を読むので、メインスレッドで呼ばない（Android版は専用のスレッド1本で呼ぶ。`…/drive/DriveModel.kt`）
 - エラーのフィールド名は `detail`（Kotlin の `message` と衝突するため）
 
@@ -58,7 +62,7 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 - 起動時（自動更新がオンなら）と1日1回確認する。Android版は WorkManager。iOS は起動時・前面に戻ったときの確認に加え、`BGAppRefreshTask` を登録する（実行は OS 任せで保証されない）
 - 「Wi-Fi 接続時のみ」（既定オン）：従量制の回線では待つ。iOS では `NWPathMonitor` の `isExpensive`／`isConstrained` で判断する
 - 保存先：Android は `filesDir/databases`。iOS は Application Support 配下に置き、iCloud バックアップから外す（`isExcludedFromBackup`）のがよい（容量が大きく、いつでも取り直せるため）
-- 県の一覧と地方：`…/data/Prefectures.kt`（slug は `data-pipeline/prefectures.json` と同じ。群馬は `gumma`）。地方の表示順は 北海道・東北・関東・中部・近畿・中国・四国・九州・沖縄
+- 県の一覧と地方：`…/data/Prefectures.kt`（slug は `data-pipeline/prefectures.json` と同じ。群馬は `gumma`）。地方は8つで、表示順は 北海道、東北、関東、中部、近畿、中国、四国、九州・沖縄（九州と沖縄で1つ）
 - 現在地の県を自動で追加（既定オン）：3km 動くか10分ごとに逆ジオコーディングで都道府県名を出し、持っていなければダウンロードする。iOS は `CLGeocoder` の `administrativeArea`。名前は「北海道」「東京都」のように Prefectures の `name` と照合する
 
 ## 4. 走行画面
@@ -76,7 +80,7 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 - 白い円＋赤い輪＋青い数字。輪の太さは直径の 20/220。数字は直径の 0.47（100以上は 0.40）、太字、字間を詰める
 - 色：輪 `#D7262E`、数字 `#1D4E9E`。確度「低」は輪を淡い赤 `#EB9297` の実線にする（点線は継ぎ目がずれるのでやめた）
 - 道路が見つからない：白地なしで灰色の輪（`#3A414B`）と「—」
-- 標識の上に道路名：名前 → なければ国道（`highway` が `trunk` で始まり `ref` がある）は「国道◯号」→ どちらもなければ「道路名なし」
+- 標識の上に道路名：名前 → なければ国道（`highway` が `trunk` で始まり `ref` がある）は「国道◯号」（`ref` に `;` で複数の番号が入っているときは最初の1つ）→ どちらもなければ「道路名なし」
 - 標識の下に確度の表示：棒3本（高3・中2・低1）と「確度 高／中／低」、根拠の文言
 
 | 判定段（`stage`） | 根拠の文言 |
@@ -91,6 +95,8 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 | 道路なし | 道路を特定できません |
 
 確度「低」の判定は段の番号より先に見る（低なら常に「中央線の証拠なし（安全側で30）」）。
+
+- 確度の表示の下に、次のときだけ注意書きを出す（上から順に見て最初の1つ）：位置情報が許可されていない「位置情報を許可すると速度を表示します」／保持データがない「データがありません。設定からダウンロードしてください」
 
 - 画面下に常に：「表示される速度は公開データからの推定です。実際の最高速度は現地の標識・標示に従ってください。」
 - 上部中央に「データ 2026年9月版」（保持データの最新の版）。持っていなければ「データ未取得」
