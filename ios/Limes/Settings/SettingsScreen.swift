@@ -12,6 +12,7 @@ struct SettingsScreen: View {
     let data: DataModel
     var onBack: () -> Void
     var onDownload: () -> Void
+    var onSubscribe: () -> Void
 
     var body: some View {
         @Bindable var settings = data.settings
@@ -19,6 +20,14 @@ struct SettingsScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 BackButton(label: "走行画面", action: onBack)
                 Text("設定").font(.system(size: 30, weight: .bold)).foregroundStyle(Palette.text)
+            }
+
+            CardSection("有料プラン") {
+                CardRow(first: true, action: onSubscribe) {
+                    Text(planLabel(data.access.state)).font(.system(size: 15)).foregroundStyle(Palette.text)
+                    Spacer()
+                    Text("詳しく").font(.system(size: 14)).foregroundStyle(Palette.muted)
+                }
             }
 
             CardSection("データの更新") {
@@ -68,6 +77,15 @@ struct SettingsScreen: View {
         }
         .onChange(of: settings.wifiOnly) { data.settingsChanged() }
         .onChange(of: settings.autoUpdate) { data.settingsChanged() }
+    }
+}
+
+private func planLabel(_ state: AccessState) -> String {
+    switch state {
+    case .notStarted: "無料期間（最初のダウンロードから14日間）"
+    case let .trial(ends): "無料期間中（\(monthDay(ends))まで）"
+    case .subscribed: "登録済み"
+    case .expired: "無料期間終了（未登録）"
     }
 }
 

@@ -7,7 +7,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 | パス | 内容 | 状態 |
 | --- | --- | --- |
 | `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFI・更新管理まで） |
-| `ios/` | Swift / SwiftUI、StoreKit 2 | 走行・設定・ダウンロード画面、データ更新（前面にある間のみ）まで。起動画面・アイコン、無料期間、課金、バックグラウンド更新は未実装。Android版の動作は `docs/ios-handoff.md` にまとめてある。Android版で直す項目は `docs/android-handoff.md` |
+| `ios/` | Swift / SwiftUI、StoreKit 2 | 走行・設定・ダウンロード・有料プラン画面、データ更新（前面にある間のみ）、無料期間と期間終了時の制限まで。課金（StoreKit 2）、起動画面・アイコン、バックグラウンド更新は未実装。Android版の動作は `docs/ios-handoff.md` にまとめてある。Android版で直す項目は `docs/android-handoff.md` |
 | `android/` | Kotlin / Jetpack Compose、Play Billing | 走行・設定・ダウンロード画面、データ更新、アイコン・起動画面、無料期間と Play Billing（定期購入 `premium`：`monthly`・`yearly`）まで |
 | `server/` | Cloudflare Workers＋D1。無料期間の開始日の記録（`POST /v1/trial`） | limes-trial.osprey74.workers.dev にデプロイ済み |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |

@@ -14,6 +14,7 @@ struct DriveScreen: View {
     let data: DataModel
     let drive: DriveModel
     var onSettings: () -> Void
+    var onSubscribe: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -49,13 +50,15 @@ struct DriveScreen: View {
             else if data.installed.isEmpty { "データがありません。設定からダウンロードしてください" }
             else { nil }
 
+        let locked = !data.access.state.entitled
+
         return GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             VStack(spacing: 0) {
                 topBar
                 if landscape {
                     HStack(spacing: 0) {
-                        LimitPanel(state: state, stale: stale, sign: 170, note: note)
+                        limit(locked: locked, state: state, stale: stale, sign: 170, note: note)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         Palette.line.frame(width: 1).padding(.vertical, 8)
                         SpeedPanel(state: state, stale: stale, figure: 110)
@@ -63,7 +66,7 @@ struct DriveScreen: View {
                     }
                     .padding(.horizontal, 32)
                 } else {
-                    LimitPanel(state: state, stale: stale, sign: 220, note: note)
+                    limit(locked: locked, state: state, stale: stale, sign: 220, note: note)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     Palette.line.frame(height: 1).padding(.horizontal, 16)
                     SpeedPanel(state: state, stale: stale, figure: 140)
@@ -78,6 +81,15 @@ struct DriveScreen: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, landscape ? 6 : 10)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func limit(locked: Bool, state: DriveState, stale: Bool, sign: CGFloat, note: String?) -> some View {
+        if locked {
+            LockedPanel(onSubscribe: onSubscribe)
+        } else {
+            LimitPanel(state: state, stale: stale, sign: sign, note: note)
         }
     }
 
@@ -100,6 +112,23 @@ struct DriveScreen: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+}
+
+/// In place of the sign when there is no access; opening the plans is up to the driver.
+private struct LockedPanel: View {
+    var onSubscribe: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("最高速度の表示は有料プランの機能です")
+                .font(.system(size: 18, weight: .bold)).foregroundStyle(Palette.text)
+            Text("無料期間が終わりました。現在の速度はこのまま表示されます。")
+                .font(.system(size: 14)).lineSpacing(6).foregroundStyle(Palette.muted)
+            FlatButton(text: "有料プランを見る", action: onSubscribe)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 32)
     }
 }
 

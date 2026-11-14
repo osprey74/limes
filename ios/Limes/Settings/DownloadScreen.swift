@@ -20,6 +20,11 @@ struct DownloadScreen: View {
                     .font(.system(size: 14)).lineSpacing(7).foregroundStyle(Palette.sub)
             }
 
+            if !data.access.state.entitled {
+                Text("無料期間が終わったため、ダウンロードできません。設定の「有料プラン」から登録できます。")
+                    .font(.system(size: 14)).lineSpacing(6).foregroundStyle(Palette.waiting)
+            }
+
             ToggleRow(label: "Wi-Fi 接続時のみ", note: "モバイル回線のときは待機し、Wi-Fi につながると始まります", isOn: $settings.wifiOnly, first: true)
                 .background(Palette.card)
                 .clipShape(Shapes.card)

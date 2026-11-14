@@ -37,6 +37,9 @@ final class DataModel {
     private(set) var published: [String: Published] = [:]
     private(set) var status: UpdateStatus?
 
+    /// Set once at launch (the two need each other).
+    @ObservationIgnored var access: Access!
+
     /// Why the store could not be opened, if it could not.
     private(set) var storeError: String?
 
@@ -81,7 +84,14 @@ final class DataModel {
                 self.checkNow()
             }
         }
-        if settings.autoUpdate { checkNow() }
+    }
+
+    /// At launch, once `access` is set: work out the access, then check for updates.
+    func start() {
+        Task {
+            await access.refresh()
+            if settings.autoUpdate { checkNow() }
+        }
     }
 
     func refreshInstalled() {
@@ -97,16 +107,29 @@ final class DataModel {
         }
     }
 
-    /// Keep these prefectures and fetch them (on Wi-Fi only when so set).
+    /// Keep these prefectures and fetch them (on Wi-Fi only when so set). The
+    /// first download starts the free trial; after it, downloads need access.
     func download(_ slugs: some Sequence<String>) {
-        settings.selected.formUnion(slugs)
-        checkNow()
+        let slugs = Array(slugs)
+        Task {
+            guard access.state.entitled else { return }
+            await access.startTrial()
+            settings.selected.formUnion(slugs)
+            checkNow()
+        }
     }
 
     /// Stop keeping these prefectures and delete their databases.
     func remove(_ slugs: some Sequence<String>) {
         settings.selected.subtract(slugs)
         for slug in slugs { try? engine.removePrefecture(prefecture: slug) }
+        refreshInstalled()
+    }
+
+    /// Drops every kept prefecture (access ended).
+    func removeAll() {
+        settings.selected = []
+        for database in installed { try? engine.removePrefecture(prefecture: database.prefecture) }
         refreshInstalled()
     }
 
@@ -127,8 +150,16 @@ final class DataModel {
         }
     }
 
-    /// Back in front: take up a waiting update, or make the daily check.
+    /// Back in front: the trial may have ended, or a subscription changed,
+    /// while away; then take up a waiting update, or make the daily check.
     func becameActive() {
+        Task {
+            await access.refresh()
+            resumeUpdates()
+        }
+    }
+
+    private func resumeUpdates() {
         if pending {
             checkNow()
         } else if settings.autoUpdate, settings.lastChecked.map({ Date().timeIntervalSince($0) > Self.checkEvery }) ?? true {
@@ -144,6 +175,10 @@ final class DataModel {
     private func update() async {
         pending = false
         retry?.cancel()
+        guard access.state.entitled else {
+            status = nil
+            return
+        }
         let wanted = settings.selected.sorted()
         guard !wanted.isEmpty else {
             status = .finished(installed: 0, mismatched: 0, appUpdate: 0)

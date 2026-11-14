@@ -85,13 +85,20 @@ final class DriveModel: NSObject, CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+        // Core Location calls back on the thread the manager was made on: main.
+        MainActor.assumeIsolated { onLocation(location) }
+    }
+
+    private func onLocation(_ location: CLLocation) {
+        // No access (trial over, no subscription): only the speed is worked out.
+        let locked = !data.access.state.entitled
         let engine = self.engine
         worker.async { [weak self] in
-            let next = Self.decide(location, engine: engine)
+            let next = Self.decide(location, engine: locked ? nil : engine)
             DispatchQueue.main.async {
                 guard let self, self.running else { return }
                 self.state = next
-                self.maybeAddCurrentPrefecture(location)
+                if !locked { self.maybeAddCurrentPrefecture(location) }
             }
         }
     }
@@ -100,7 +107,7 @@ final class DriveModel: NSObject, CLLocationManagerDelegate {
         // No fix for now; the screen shows "waiting" once the last one is stale.
     }
 
-    private nonisolated static func decide(_ location: CLLocation, engine: Engine) -> DriveState {
+    private nonisolated static func decide(_ location: CLLocation, engine: Engine?) -> DriveState {
         let c = jst.dateComponents([.year, .month, .day, .hour, .minute], from: location.timestamp)
         let time = localTime(
             year: Int32(c.year!), month: UInt8(c.month!), day: UInt8(c.day!),
@@ -115,7 +122,7 @@ final class DriveModel: NSObject, CLLocationManagerDelegate {
             heading: heading, speedMps: speed
         )
         return DriveState(
-            road: engine.locate(fix: fix, time: time),
+            road: engine?.locate(fix: fix, time: time),
             speedKmh: speed.map { Int(($0 * 3.6).rounded()) },
             gps: quality(location),
             fixAt: Date()

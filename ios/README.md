@@ -1,6 +1,6 @@
 # ios
 
-iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings and download screens and data updates (at launch, on return to the front and daily while in use; foreground transfers only). Still to come: the launch screen and icon, the free trial, the subscription, and updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
+iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings, download and plans screens, data updates (at launch, on return to the front and daily while in use; foreground transfers only) and the free trial (recorded by `server/`, with the limits once it is over). Still to come: the subscription (StoreKit 2; until then the store counts as unreachable, so nothing is deleted when a trial ends), the launch screen and icon, and updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
 
 | Item | Value |
 | --- | --- |
