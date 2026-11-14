@@ -7,7 +7,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 | パス | 内容 | 状態 |
 | --- | --- | --- |
 | `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFI・更新管理まで） |
-| `ios/` | Swift / SwiftUI、StoreKit 2 | 未着手 |
+| `ios/` | Swift / SwiftUI、StoreKit 2 | 未着手。Android版の動作は `docs/ios-handoff.md` にまとめてある |
 | `android/` | Kotlin / Jetpack Compose、Play Billing | 走行・設定・ダウンロード画面、データ更新、アイコン・起動画面、無料期間と Play Billing（定期購入 `premium`：`monthly`・`yearly`）まで |
 | `server/` | Cloudflare Workers＋D1。無料期間の開始日の記録（`POST /v1/trial`） | limes-trial.osprey74.workers.dev にデプロイ済み |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |
@@ -36,7 +36,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 - 作者も通常どおり課金して使う。ストア版に独自の解放手段（隠しコード・特定アカウントの解放）は入れない（ガイドライン3.1.1）（2026-11-11決定）
 - 優待：アプリ独自のクーポンで有料機能を解放することはApp Store審査ガイドライン3.1.1で禁止。使うならApple Offer Codes／Google Playプロモーションコード（期間限定の割引・無料）。特定の人への無料提供は見送り（2026-11-09決定）
 - データは毎日 `opendata.json` で更新を検知し、自動ビルド → 検証ゲート → R2配信（manifest.json）→ アプリ起動時に差分取得
-- 配信URL：開発中はR2のr2.dev公開URLと `limes-trial.osprey74.workers.dev`（r2.devは本番非推奨・レート制限あり）。正式リリースまでに、アプリ共通のドメイン `osprey74.app`（お名前.comで取得、取得・更新とも年3,520円）のネームサーバーをCloudflare無料プランに向け、`limes.osprey74.app`（R2のカスタムドメイン：データ配信とプライバシーポリシー）と `limes-trial.osprey74.app`（Workers）にする。アプリごとにドメインは取らない。サブドメインは1階層まで（無料のUniversal SSLは2階層目以下を対象にしない）。osprey74.com（既存サイトとメール、お名前.comのレンタルサーバー）とkazahana.appは触らない。アプリは配信URLを設定値で持ち、差し替えられるようにする（2026-11-09決定、2026-11-12にドメインを変更）
+- 配信URL：開発中はR2のr2.dev公開URLと `limes-trial.osprey74.workers.dev`（r2.devは本番非推奨・レート制限あり）。正式リリースまでに、アプリ共通のドメイン `osprey74.app`（お名前.comで取得、取得・更新とも年3,520円）のネームサーバーをCloudflare無料プランに向け、`limes.osprey74.app`（R2のカスタムドメイン：データ配信とプライバシーポリシー）と `limes-trial.osprey74.app`（Workers）にする。アプリごとにドメインは取らない。サブドメインは1階層まで（無料のUniversal SSLは2階層目以下を対象にしない）。osprey74.com（既存サイトとメール、お名前.comのレンタルサーバー）とkazahana.appは触らない。アプリは配信URLを設定値で持ち、差し替えられるようにする（2026-11-09決定、2026-11-12にドメインを変更）。検討中（2026-11-13）：osprey74.app を取らず、osprey74.com のネームサーバーをCloudflareに移して `limes.osprey74.com` などを使う案。既存サイトとメールのDNSレコードをすべて写すことが条件
 - 速度マップを搭載しないため、速度線タイル（PMTiles）は作らない。2026-11-09に一度作ったが同日に取り止め（コードはgit履歴 db24e79 にある）
 
 ## データの注意点（Phase 0で判明）
