@@ -1,6 +1,6 @@
 # ios
 
-iOS app (Swift / SwiftUI, StoreKit 2). The project builds and loads the Rust core; the screens come next. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
+iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings and download screens and data updates (at launch, on return to the front and daily while in use; foreground transfers only). Still to come: the launch screen and icon, the free trial, the subscription, and updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
 
 | Item | Value |
 | --- | --- |

@@ -11,12 +11,11 @@ private let disclaimerShort = "表示される速度は公開データからの�
 
 /// The estimated maximum speed of the road as a sign, next to the GPS speed.
 struct DriveScreen: View {
-    let core: Core
+    let data: DataModel
     let drive: DriveModel
     var onSettings: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("keep_awake") private var keepAwake = true
 
     var body: some View {
         // Ticks every second so stale fixes (a tunnel) are noticed.
@@ -29,13 +28,12 @@ struct DriveScreen: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { resume() } else { pause() }
         }
-        .onChange(of: keepAwake) { _, on in UIApplication.shared.isIdleTimerDisabled = on }
     }
 
     private func resume() {
         guard scenePhase == .active else { return }
         drive.start()
-        UIApplication.shared.isIdleTimerDisabled = keepAwake
+        UIApplication.shared.isIdleTimerDisabled = data.settings.keepAwake
     }
 
     private func pause() {
@@ -48,7 +46,7 @@ struct DriveScreen: View {
         let stale = state.fixAt.map { now.timeIntervalSince($0) > staleAfter } ?? true
         let note: String? =
             if !drive.permitted { "位置情報を許可すると速度を表示します" }
-            else if core.installed.isEmpty { "データがありません。設定からダウンロードしてください" }
+            else if data.installed.isEmpty { "データがありません。設定からダウンロードしてください" }
             else { nil }
 
         return GeometryReader { geo in
@@ -84,7 +82,7 @@ struct DriveScreen: View {
     }
 
     private var topBar: some View {
-        let version = core.installed.compactMap(\.version).max()
+        let version = data.installed.compactMap(\.version).max()
         return HStack {
             Color.clear.frame(width: 44, height: 44)
             Text(version.map { "データ \(versionLabel($0))" } ?? "データ未取得")
