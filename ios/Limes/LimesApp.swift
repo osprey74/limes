@@ -26,14 +26,15 @@ struct LimesApp: App {
 }
 
 private enum Screen {
-    case drive, settings, download, subscribe
+    case launch, drive, settings, download, subscribe
 }
 
-/// The app has no map and four screens: driving, settings, download, plans.
+/// The app has no map and four screens: driving, settings, download, plans,
+/// after a word on safe driving at every launch.
 private struct RootView: View {
     let data: DataModel
     let drive: DriveModel
-    @State private var screen = Screen.drive
+    @State private var screen = Screen.launch
 
     /// Where the plans were opened from, for their back button.
     @State private var plansFrom = Screen.drive
@@ -61,6 +62,12 @@ private struct RootView: View {
     var body: some View {
         Group {
             switch screen {
+            case .launch:
+                // With the trial over, the plans show once at launch, never while driving.
+                LaunchScreen {
+                    guard screen == .launch else { return }
+                    if data.access.state == .expired { openPlans(from: .drive) } else { screen = .drive }
+                }
             case .drive:
                 DriveScreen(data: data, drive: drive, onSettings: { screen = .settings }, onSubscribe: { openPlans(from: .drive) })
             case .settings:
@@ -77,10 +84,6 @@ private struct RootView: View {
                     onBack: { screen = plansFrom }
                 )
             }
-        }
-        // With the trial over, the plans show once at launch, never while driving.
-        .onAppear {
-            if screen == .drive, data.access.state == .expired { openPlans(from: .drive) }
         }
     }
 }

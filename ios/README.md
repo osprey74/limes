@@ -1,6 +1,6 @@
 # ios
 
-iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings, download and plans screens, data updates (at launch, on return to the front and daily while in use; foreground transfers only), the free trial (recorded by `server/`, with the limits once it is over) and the subscription (StoreKit 2: the plans with their prices from the store, purchase, restore, and the system's manage-subscriptions sheet). Still to come: the launch screen and icon, and updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
+iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings, download and plans screens, data updates (at launch, on return to the front and daily while in use; foreground transfers only), the free trial (recorded by `server/`, with the limits once it is over) and the subscription (StoreKit 2: the plans with their prices from the store, purchase, restore, and the system's manage-subscriptions sheet), the icon and the launch screen. Still to come: updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
 
 | Item | Value |
 | --- | --- |
@@ -31,6 +31,16 @@ The script sets `IPHONEOS_DEPLOYMENT_TARGET` to the app's deployment target; kee
 scripts/build-core.sh
 open Limes.xcodeproj
 ```
+
+## Icon and launch screen
+
+The icon is the gauge of the Android app (`../android/app/src/main/res/drawable/ic_launcher_foreground.xml`). `scripts/render-icon.swift` draws it from the same figures and writes the PNGs in `Limes/Assets.xcassets` (the 1024 app icon, and the gauge alone for the launch screens); they are committed, so run it only after changing the icon:
+
+```sh
+swift scripts/render-icon.swift
+```
+
+The system's launch screen (`Info.plist`, `UILaunchScreen`) is the gauge on the ground color, with no text. The app's own screen (`Limes/UI/LaunchScreen.swift`) follows at every launch for about 1.5 seconds, with the name and a word on safe driving around the gauge at the same place; a tap skips it.
 
 ## Subscription
 
