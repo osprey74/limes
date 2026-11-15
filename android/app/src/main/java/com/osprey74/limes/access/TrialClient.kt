@@ -3,6 +3,7 @@ package com.osprey74.limes.access
 import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.Settings.Secure
+import com.osprey74.limes.USER_AGENT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -26,6 +27,7 @@ class TrialClient(private val url: String, private val context: Context) {
             connectTimeout = 15_000
             readTimeout = 15_000
             setRequestProperty("content-type", "application/json")
+            setRequestProperty("User-Agent", USER_AGENT)
         }
         try {
             val body = JSONObject().put("id", deviceHash()).put("platform", "android").toString()

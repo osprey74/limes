@@ -1,5 +1,6 @@
 package com.osprey74.limes.data
 
+import com.osprey74.limes.USER_AGENT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -64,5 +65,6 @@ class DataServer(private val baseUrl: String, dir: File) {
             connectTimeout = 15_000
             readTimeout = 60_000
             useCaches = false
+            setRequestProperty("User-Agent", USER_AGENT)
         }
 }

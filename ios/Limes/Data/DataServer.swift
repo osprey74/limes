@@ -66,6 +66,7 @@ struct DataServer {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         // The ETag is handled here, not by the URL cache.
         request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue(Config.userAgent, forHTTPHeaderField: "User-Agent")
         if wifiOnly {
             request.allowsExpensiveNetworkAccess = false
             request.allowsConstrainedNetworkAccess = false

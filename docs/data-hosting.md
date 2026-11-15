@@ -78,17 +78,20 @@ Workers（`workers.dev`）：
 - [x] 最初の全県コピー（2026-11-15 21:10〜21:17、約7分）。`data` フォルダに県別データ94件（47県 × 2世代、約1.39 GB）、`manifest.json`、`.htaccess`
 - [x] 公開 URL の `manifest.json` が R2 と一致することを確認
 
-アプリは、まだ `r2.dev` の URL を読んでいる。
+- [x] Android 版の配信 URL を `https://limes.osprey74.com/data/` に変更（2026-11-16。`android/app/build.gradle.kts` の `DATA_BASE_URL`）
+- [x] データの取得先の名前の書き換え（2026-11-16）。`docs/release-prep.md`（1 の表、2、3）と `site/privacy/index.html`（5. 外部サービスとの通信）を、お名前.com のレンタルサーバー（運営：GMOインターネット株式会社）に直した。事実に合わせるだけの修正で、ストアの申告の内容は変えていない（2026-11-15決定。県名入りのファイル名の取得要求は、申告を変えるほどの情報ではないと判断。サーバーのアクセス記録の有無も調べない）
+
+iOS 版は、まだ `r2.dev` の URL を読んでいる。
 
 ## 6. 残っている作業
 
-1. アプリの配信 URL を `https://limes.osprey74.com/data/` に変える（`android/app/build.gradle.kts` の `DATA_BASE_URL`、`ios/Limes/Config.swift` の `dataBaseURL`）
-2. 1 と同時に、データの取得先の名前を書き換える。`docs/release-prep.md`（1 の表と 3）と `site/privacy/index.html` にある「Cloudflare R2」を、お名前.com のサーバーに直す。事実に合わせるだけの修正で、ストアの申告の内容は変えない（2026-11-15決定。県名入りのファイル名の取得要求は、申告を変えるほどの情報ではないと判断。サーバーのアクセス記録の有無も調べない）
+1. iOS 版の配信 URL を `https://limes.osprey74.com/data/` に変える（`ios/Limes/Config.swift` の `dataBaseURL`）。プライバシーポリシーは切り替え後の内容で書いてあるので、公開の前に行う
+2. （済み。5 を参照）
 3. R2 の `r2.dev` での公開を止める（1 のあと）。止めると、JARTIC の元 ZIP が外から取れる状態も解消する
 4. プライバシーポリシー（`site/privacy/index.html`）を `https://limes.osprey74.com/privacy/` に置き、ストアに URL を登録する。置き方（手動か、自動か）は未定
 5. 定期実行が止まることへの備え。公開リポジトリでは、60日間リポジトリに動きがないと、定期実行が自動で無効になる（GitHub の仕様）
 6. 証明書の期限切れに気づく仕組み。`mirror` の確認は `mirror` が動いた日にしか行われない
-7. （任意）アプリから独自の User-Agent を送る。`workers.dev` のチェックの対象が将来変わることへの備え
+7. （済み。2026-11-16）アプリから独自の User-Agent を送る。`workers.dev` のチェックの対象が将来変わることへの備え。値は `Limes/<アプリの版> (Android)`・`Limes/<アプリの版> (iOS)` で、端末の機種や OS の版は入れない（`android/…/UserAgent.kt`、`ios/Limes/Config.swift` の `userAgent`）。データの取得と無料期間の記録の両方に付ける。この値でお名前.com のサーバーから取得でき、Workers まで届くことを確かめた。iOS 版は Xcode でのビルドと動作をまだ確かめていない
 
 ## 7. 未確認のこと
 
