@@ -83,7 +83,7 @@ Workers（`workers.dev`）：
 ## 6. 残っている作業
 
 1. アプリの配信 URL を `https://limes.osprey74.com/data/` に変える（`android/app/build.gradle.kts` の `DATA_BASE_URL`、`ios/Limes/Config.swift` の `dataBaseURL`）
-2. 1 と同時に、プライバシーポリシーと申告を見直す。配信先が Cloudflare R2 からお名前.com のサーバーに変わる。レンタルサーバーがアクセスの記録（IP アドレスと取得したファイル名）を残すかを確かめ、「取得する都道府県」の扱いを `docs/release-prep.md` の 1・3・4、`site/privacy/index.html`、`ios/Limes/PrivacyInfo.xcprivacy` でそろえる
+2. 1 と同時に、データの取得先の名前を書き換える。`docs/release-prep.md`（1 の表と 3）と `site/privacy/index.html` にある「Cloudflare R2」を、お名前.com のサーバーに直す。事実に合わせるだけの修正で、ストアの申告の内容は変えない（2026-11-15決定。県名入りのファイル名の取得要求は、申告を変えるほどの情報ではないと判断。サーバーのアクセス記録の有無も調べない）
 3. R2 の `r2.dev` での公開を止める（1 のあと）。止めると、JARTIC の元 ZIP が外から取れる状態も解消する
 4. プライバシーポリシー（`site/privacy/index.html`）を `https://limes.osprey74.com/privacy/` に置き、ストアに URL を登録する。置き方（手動か、自動か）は未定
 5. 定期実行が止まることへの備え。公開リポジトリでは、60日間リポジトリに動きがないと、定期実行が自動で無効になる（GitHub の仕様）

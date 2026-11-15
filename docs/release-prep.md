@@ -19,7 +19,7 @@
 
 - 本文：`site/privacy/index.html`（日本語と英語を1ページに）
 - 公開先：`https://limes.osprey74.com/privacy/` を予定（配信ドメインは 2026-11-15 に `limes.osprey74.com` と決定。`docs/data-hosting.md`。まだ置いていない。置いたら App Store Connect と Google Play Console に URL を登録する）
-- アプリの配信 URL をお名前.com のサーバーに切り替えるときは、上の表の「取得する都道府県」（いまは Cloudflare R2 への要求）と、下の 3 の R2 に関する記述、ポリシー本文を見直す（`docs/data-hosting.md` の 6）
+- アプリの配信 URL をお名前.com のサーバーに切り替えるときは、上の表の「取得する都道府県」と下の 3、ポリシー本文にある「Cloudflare R2」を、お名前.com のサーバーに書き換える。申告の内容は変えない（2026-11-15決定。`docs/data-hosting.md` の 6）
 - 問い合わせ先：GitHub Issues（<https://github.com/osprey74/limes/issues>）
 - アプリの挙動を変えたら（送信する情報、外部サービス、位置情報の使い方）、ポリシー・下の申告・`ios/Limes/PrivacyInfo.xcprivacy` の3つをそろえて直す
 
