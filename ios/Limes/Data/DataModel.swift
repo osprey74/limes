@@ -46,13 +46,13 @@ final class DataModel {
     @ObservationIgnored private let server: DataServer
     @ObservationIgnored private let network = NetworkMonitor()
     @ObservationIgnored private let downloads: URL
-    @ObservationIgnored private var running = false
+    @ObservationIgnored private var running: Task<Void, Never>?
     @ObservationIgnored private var again = false
     @ObservationIgnored private var pending = false
     @ObservationIgnored private var retry: Task<Void, Never>?
 
     private static let retryAfter: Duration = .seconds(60)
-    private static let checkEvery: TimeInterval = 24 * 60 * 60
+    static let checkEvery: TimeInterval = 24 * 60 * 60
 
     init(settings: Settings) {
         self.settings = settings
@@ -136,18 +136,36 @@ final class DataModel {
     /// Update now (or as soon as the network allows); a request made while
     /// one runs is served by another run after it.
     func checkNow() {
-        if running {
+        if running != nil {
             again = true
             return
         }
-        running = true
-        Task {
+        running = Task {
             repeat {
                 again = false
                 await update()
-            } while again
-            running = false
+            } while again && !Task.isCancelled
+            running = nil
         }
+    }
+
+    /// The daily check while the app is not in use (BackgroundUpdate): the
+    /// update under way if there is one (a launch in the background starts
+    /// one), or a new one. True when it finished; false when it has to wait
+    /// or failed. `stop` ends it early: what was installed stays, the rest
+    /// is fetched next time.
+    func updateInBackground() async -> Bool {
+        if running == nil {
+            await access.refresh()
+            checkNow()
+        }
+        await running?.value
+        if case .finished = status { return true }
+        return false
+    }
+
+    func stop() {
+        running?.cancel()
     }
 
     /// Back in front: the trial may have ended, or a subscription changed,

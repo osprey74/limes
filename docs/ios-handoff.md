@@ -59,7 +59,7 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 - `manifest.json` を ETag 付きで取る。前回の本文と ETag を保存し、`If-None-Match` で 304 なら保存済みを使う（`…/data/DataServer.kt`）。オフライン時の容量表示にも保存済みを使う
 - manifest の形式：`prefectures.<slug> = {version, schema_version, jartic_month, osm_date, path, size, sha256, raw_size}`。`path` は manifest からの相対パス
 - 更新の流れ（`…/data/UpdateWorker.kt`）：選んだ県が空なら何もしない → manifest 取得（通信失敗は後で再試行）→ `planUpdates` → 各 `downloads` をキャッシュに落として `installUpdate` → 一時ファイルを消す。`DownloadMismatch` はその県だけ飛ばして次回に回す
-- 起動時（自動更新がオンなら）と1日1回確認する。Android版は WorkManager。iOS は起動時・前面に戻ったときの確認に加え、`BGAppRefreshTask` を登録する（実行は OS 任せで保証されない）
+- 起動時（自動更新がオンなら）と1日1回確認する。Android版は WorkManager。iOS は起動時・前面に戻ったときの確認に加え、`BGProcessingTask` を登録する（実行は OS 任せで保証されない。`BGAppRefreshTask` は実行時間が約30秒で、複数県のデータベースの取得には足りないため使わない。`ios/Limes/Data/BackgroundUpdate.swift`、2026-11-15実装。実機でタスクを擬似的に起こし、「最終確認」が進むことを確かめた。iOS が自分でタスクを起こすところと、時間切れで止まるところは未確認）
 - 「Wi-Fi 接続時のみ」（既定オン）：従量制の回線では待つ。iOS では `NWPathMonitor` の `isExpensive`／`isConstrained` で判断する
 - 保存先：Android は `filesDir/databases`。iOS は Application Support 配下に置き、iCloud バックアップから外す（`isExcludedFromBackup`）のがよい（容量が大きく、いつでも取り直せるため）
 - 県の一覧と地方：`…/data/Prefectures.kt`（slug は `data-pipeline/prefectures.json` と同じ。群馬は `gumma`）。地方は8つで、表示順は 北海道、東北、関東、中部、近畿、中国、四国、九州・沖縄（九州と沖縄で1つ）

@@ -9,6 +9,7 @@ struct LimesApp: App {
     init() {
         let data = DataModel(settings: Settings())
         data.access = Access(data: data)
+        BackgroundUpdate.register(data)
         data.start()
         _data = State(initialValue: data)
         _drive = State(initialValue: DriveModel(data: data))
@@ -21,6 +22,7 @@ struct LimesApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { data.becameActive() }
+            if phase == .background { BackgroundUpdate.schedule(data) }
         }
     }
 }
