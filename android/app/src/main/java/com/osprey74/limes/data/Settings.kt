@@ -47,7 +47,7 @@ class Settings(private val context: Context) {
 
     suspend fun setDataRemovedNotice(on: Boolean) = context.dataStore.edit { it[Keys.dataRemovedNotice] = on }
 
-    /** Add the prefecture the car is in and its neighbours (default on). */
+    /** Add the prefecture the car is in; crossing a border adds the next one (default on). */
     val autoAddCurrent: Flow<Boolean> = context.dataStore.data.map { it[Keys.autoAddCurrent] ?: true }
 
     /** Keep the screen on while the driving screen shows (default on). */

@@ -157,6 +157,8 @@ private fun yearlyNote(yearly: Plan, monthly: Plan?): String? {
     }
     val perMonth = "月あたり " + format.format(yearly.priceMicros / 12 / 1_000_000.0)
     if (monthly == null || monthly.currency != yearly.currency || monthly.priceMicros == 0L) return perMonth
-    val saving = (100 - yearly.priceMicros * 100 / (monthly.priceMicros * 12)).toInt()
+    // Round the saving down, so it never claims more than it is.
+    val full = monthly.priceMicros * 12
+    val saving = ((full - yearly.priceMicros) * 100 / full).toInt()
     return if (saving > 0) "$perMonth（月額の12か月分より${saving}%お得）" else perMonth
 }

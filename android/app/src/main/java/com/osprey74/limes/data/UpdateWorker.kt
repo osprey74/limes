@@ -48,6 +48,8 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             } catch (e: LimesException.DownloadMismatch) {
                 mismatched += 1
             } catch (e: IOException) {
+                // Show the prefectures already installed; the check is not done, so leave lastChecked.
+                app.data.refreshInstalled()
                 return Result.retry()
             } finally {
                 file.delete()
