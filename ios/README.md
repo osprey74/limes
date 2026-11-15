@@ -58,4 +58,15 @@ The products are `com.osprey74.limes.premium.monthly` and `com.osprey74.limes.pr
 
 `Limes.storekit` is a StoreKit configuration for local testing, and the shared `Limes` scheme uses it, so a run from Xcode shows the two plans and lets you buy, renew, expire and refund them without App Store Connect (Debug > StoreKit > Manage Transactions). Its prices are ¥500 a month and ¥4,800 a year. The note under the yearly plan ("月あたり ¥400（月額の12か月分より20%お得）") is worked out from the displayed prices, because Xcode's test store (27.2) gives `Product.price` as 4 for ¥4,800. It applies only to runs started from Xcode: an app launched any other way asks the App Store, and until the products exist in App Store Connect the plans screen says it can't show them.
 
+## Tests
+
+`LimesTests/AccessTests.swift` runs inside the app against the same `Limes.storekit` (StoreKit Test), with no App Store Connect and no Apple Account: the plans and their prices, the end of the trial (data deleted, no downloads), subscribing from there, restore with and without a purchase, the end of a subscription (data kept for 60 days, then deleted), a refund, and the billing grace period.
+
+```sh
+xcodebuild test -project Limes.xcodeproj -scheme Limes -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
+```
+
+- The tests use the app's own settings and databases in that simulator. The settings are put back afterwards; the kept databases are deleted along the way. One prefecture is downloaded, so the network is needed.
+- On a fresh install the app asks for the location, and the tests wait until that is answered. Answer it in the simulator, or, once the app is installed, grant it beforehand: `xcrun simctl privacy <simulator> grant location com.osprey74.limes`.
+
 Signing: automatic, with the author's team set in the project. To run on a device with another account, choose your team under Signing & Capabilities. The simulator needs no team.
