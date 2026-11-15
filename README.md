@@ -17,6 +17,7 @@ Estimates always come with a confidence level. Actual road signs and markings ta
 | `android/` | Android app (Kotlin / Jetpack Compose) |
 | `data-pipeline/` | Python pipeline: JARTIC / OSM / GSI data ingestion |
 | `server/` | Free-trial ledger (Cloudflare Workers + D1) |
+| `site/` | Pages to publish (privacy policy) |
 | `docs/` | Design notes and data validation reports |
 
 ## Data sources
