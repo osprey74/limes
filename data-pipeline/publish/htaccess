@@ -1,8 +1,9 @@
 # Uploaded as .htaccess to https://limes.osprey74.com/data/ by the data-release workflow.
 #
 # The server's nginx cache otherwise keeps serving the previous manifest.json
-# for a while after an upload. With no-cache the apps revalidate every time
-# and get a 304 when nothing changed.
+# for a while after an upload. With no-cache every request reaches the file
+# itself. The price: this server then answers If-None-Match with a full 200
+# (3.5 KB gzipped) instead of a 304, which the apps handle the same way.
 <IfModule mod_headers.c>
   <Files "manifest.json">
     Header set Cache-Control "no-cache"

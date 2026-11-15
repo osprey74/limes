@@ -55,7 +55,7 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 
 ## 3. データの取得と更新
 
-- 配信元：開発中は `https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/`。正式リリースまでに `https://limes.osprey74.app/` へ移す予定（CLAUDE.md「配信URL」。osprey74.com を使う案も検討中）。URL は設定値で持ち、差し替えられるようにする
+- 配信元：開発中は `https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/`。正式リリースまでに `https://limes.osprey74.com/data/` へ移す（2026-11-15決定。`docs/data-hosting.md`）。URL は設定値で持ち、差し替えられるようにする
 - `manifest.json` を ETag 付きで取る。前回の本文と ETag を保存し、`If-None-Match` で 304 なら保存済みを使う（`…/data/DataServer.kt`）。オフライン時の容量表示にも保存済みを使う
 - manifest の形式：`prefectures.<slug> = {version, schema_version, jartic_month, osm_date, path, size, sha256, raw_size}`。`path` は manifest からの相対パス
 - 更新の流れ（`…/data/UpdateWorker.kt`）：選んだ県が空なら何もしない → manifest 取得（通信失敗は後で再試行）→ `planUpdates` → 各 `downloads` をキャッシュに落として `installUpdate` → 一時ファイルを消す。`DownloadMismatch` はその県だけ飛ばして次回に回す
@@ -138,7 +138,7 @@ POST https://limes-trial.osprey74.workers.dev/v1/trial
 
 - サーバーにつながらないときは端末の時計で14日を数え始め、「未確認」の印を付ける。次の判定でサーバーに聞き直し、サーバーの終了日が早ければそちらを使う（再インストールで延ばさせない）
 - 終了日は端末に保存し、以後の判定は端末の時計で行う
-- URL は正式リリースまでに `https://limes-trial.osprey74.app/v1/trial` へ移す予定（設定値で持つ）
+- URL は `workers.dev` のまま使う（2026-11-15決定。`docs/data-hosting.md`）。設定値で持つ
 
 ## 8. 課金（StoreKit 2）
 
@@ -187,6 +187,6 @@ iOS版でも Sandbox と StoreKit の設定ファイル（Xcode の StoreKit テ
 
 下書きと申告の内容は `docs/release-prep.md` にまとめた（2026-11-15）。
 
-- プライバシーポリシー：`site/privacy/index.html`（公開先は `limes.osprey74.app/privacy/` を予定）
+- プライバシーポリシー：`site/privacy/index.html`（公開先は `limes.osprey74.com/privacy/` を予定）
 - App Store のプライバシー情報：端末の識別子（ハッシュ）を無料期間の管理のために送る。位置情報は開発者のサーバーへは送らないが、自動追加が有効なときは、いまいる都道府県を調べるために OS の逆ジオコーディング（iOS は `CLGeocoder`、Android は `Geocoder`）へ現在地を送る。「位置情報は端末の外に出さない」とは書けない
 - 審査メモ：運転中の利用を前提とするアプリであること、速度超過の警告を出さないこと、表示は推定であることの説明
