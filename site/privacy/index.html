@@ -37,58 +37,62 @@
   <h1>プライバシーポリシー</h1>
   <p class="updated">最終更新日：2026年11月15日</p>
 
-  <p>Limes（以下「本アプリ」）は、個人開発者 osprey74 が提供する、走行中の道路の最高速度を公開データから推定して表示する iPhone・Android 向けアプリです。本ポリシーは、本アプリが扱う情報について説明します。</p>
+  <p>本プライバシーポリシーは、個人開発者 osprey74（以下「開発者」）が提供する Limes アプリ（以下「本アプリ」）における、利用者の情報の取扱いについて定めるものです。</p>
 
-  <h2>1. 位置情報</h2>
-  <p>本アプリは、走行中の道路を特定し、最高速度の推定と現在の速度を表示するために、端末の位置情報を使います。</p>
+  <h2>1. 収集する情報</h2>
+  <p>本アプリは、以下の情報を取得します。</p>
   <ul>
-    <li>道路の特定と速度の表示は、端末の中だけで処理します。位置情報を開発者のサーバーへ送信することはありません。</li>
-    <li>「現在地の都道府県を自動で追加」を有効にしている場合（初期設定で有効）は、いまいる都道府県を調べるために、OS の住所検索の機能（iPhone では Apple、Android では Google のサービス）へ現在地を送信します。約3 km 移動するごと、または10分ごとに1回です。この設定は設定画面で無効にでき、無効にすると現在地はどこにも送信されません。</li>
-    <li>位置情報を取得するのは、本アプリを使用している間だけです。</li>
-    <li>走行した経路や位置の履歴は保存しません。</li>
+    <li><strong>位置情報</strong>：走行中の道路の特定、最高速度の推定および現在の速度の表示のために使用します。これらの処理は端末上でのみ行い、開発者のサーバーには送信しません。位置情報の取得は本アプリの使用中に限られ、走行経路および位置の履歴は保存しません。</li>
+    <li><strong>現在地の都道府県の判定のための位置情報</strong>：「現在地の都道府県を自動で追加」が有効な場合（初期設定で有効）に限り、現在地の都道府県を判定するため、OS が提供する住所検索機能（iPhone では Apple、Android では Google のサービス）に現在地を送信します。送信は約 3 km の移動ごと、または 10 分ごとに 1 回です。設定画面で無効にした場合、送信は行われません。</li>
+    <li><strong>端末識別用の値</strong>：端末ごとの ID を SHA-256 でハッシュ化した値です。iPhone では本アプリが生成して端末に保存するランダムな ID、Android では Android ID をもとに作成します。もとの ID 自体は送信しません。OS の種類（iOS または Android）および最初の送信日時とともに、最初の道路データのダウンロード時に 1 回だけ開発者のサーバーに送信し、保存します。</li>
+    <li><strong>ダウンロードする都道府県</strong>：利用者が選択した都道府県、および自動追加が有効な場合は現在地の都道府県の道路データを、配信サーバーに要求します。位置情報そのものは配信サーバーに送信しません。</li>
+    <li><strong>アプリ設定および道路データ</strong>：端末内にのみ保存します。</li>
   </ul>
 
-  <h2>2. 開発者のサーバーに送信する情報</h2>
-  <p>本アプリは、無料期間（最初のデータダウンロードから14日間）を管理するために、次の情報を開発者のサーバーに一度だけ送信し、保存します。</p>
+  <h2>2. 収集しない情報</h2>
+  <p>本アプリは、以下の情報を収集・送信しません。</p>
   <ul>
-    <li><strong>端末を区別するための値</strong>：端末ごとの ID を SHA-256 で変換した値です。iPhone では本アプリが作成して端末に保存したランダムな ID、Android では Android ID をもとにします。もとの ID そのものは送信しません。</li>
-    <li><strong>OS の種類</strong>：iOS か Android か。</li>
-    <li><strong>最初に送信された日時</strong>：無料期間の開始日として記録します。</li>
-  </ul>
-  <p>送信するのは、最初に道路データをダウンロードしたときです。この値は、本アプリを削除して入れ直しても無料期間が始めからにならないようにするためだけに使います。氏名・メールアドレス・位置情報などと結び付けることはなく、この値から利用者個人を特定することはできません。</p>
-  <p>iPhone では、もとの ID は端末のキーチェーンに保存され、本アプリを削除しても残ります。端末のバックアップから復元した場合は、新しい端末にも引き継がれます。</p>
-
-  <h2>3. 道路データのダウンロード</h2>
-  <p>本アプリは、利用者が選んだ都道府県の道路データを配信サーバーからダウンロードし、端末に保存します。「現在地の都道府県を自動で追加」を有効にしている場合（初期設定で有効）は、いまいる都道府県のデータも自動でダウンロードします。配信サーバーへ送信するのは、どの都道府県のデータを取得するかの要求だけで、位置情報そのものは送信しません。通信の際には、一般のウェブサイトの閲覧と同じく、IP アドレスなどの接続情報が配信サービスの事業者（Cloudflare, Inc.）に渡ります。開発者がこれらを利用者の識別に使うことはありません。</p>
-
-  <h2>4. 有料プラン（サブスクリプション）</h2>
-  <p>有料プランの購入と支払いは、App Store（Apple）または Google Play（Google）が処理します。開発者が、氏名・支払い方法・Apple Account や Google アカウントの情報を受け取ることはありません。本アプリは、登録が有効かどうかを端末上でストアに確認するだけで、その結果を開発者のサーバーへ送信しません。</p>
-
-  <h2>5. 利用する外部のサービス</h2>
-  <ul>
-    <li>Cloudflare（道路データの配信、無料期間の記録）：<a href="https://www.cloudflare.com/privacypolicy/">Cloudflare プライバシーポリシー</a></li>
-    <li>App Store（iPhone 版の購入）と Apple の住所検索（iPhone 版で、いまいる都道府県を調べる）：<a href="https://www.apple.com/legal/privacy/">Apple プライバシーポリシー</a></li>
-    <li>Google Play（Android 版の購入）と Google のサービス（Android 版の位置情報の取得と、いまいる都道府県を調べる住所検索）：<a href="https://policies.google.com/privacy">Google プライバシーポリシー</a></li>
-  </ul>
-  <p>本アプリには、広告、アクセス解析、行動の追跡（トラッキング）のための仕組みを入れていません。アカウントの登録もありません。</p>
-
-  <h2>6. 第三者への提供</h2>
-  <p>本アプリが扱う情報を、第三者に販売・提供することはありません。ただし、法令に基づく場合を除きます。</p>
-
-  <h2>7. 保存と削除</h2>
-  <ul>
-    <li>設定と道路データは端末の中に保存します。道路データは設定画面から都道府県ごとに削除でき、本アプリを削除するとすべて消去されます。</li>
-    <li>開発者のサーバーに保存した「端末を区別するための値」は、入れ直しによる無料期間のやり直しを防ぐために保持します。この値は利用者個人と結び付いていないため、開発者は特定の利用者の値を探し出すことができません。</li>
+    <li>氏名、メールアドレス、電話番号その他の個人を特定する情報（本アプリにアカウント登録はありません）</li>
+    <li>広告識別子（IDFA、広告 ID）</li>
+    <li>行動ログ・分析データ（広告、アクセス解析およびトラッキングのための SDK は使用していません）</li>
+    <li>支払いに関する情報（有料プランの購入および決済は App Store または Google Play が処理し、開発者は氏名、支払い方法、Apple Account および Google アカウントの情報を受け取りません）</li>
   </ul>
 
-  <h2>8. 対象年齢</h2>
-  <p>本アプリは自動車の運転者を対象としています。13歳未満のお子様から意図的に個人情報を収集することはありません。</p>
+  <h2>3. 利用目的</h2>
+  <p>取得した情報は、以下の目的にのみ利用します。</p>
+  <ul>
+    <li>走行中の道路の最高速度の推定および現在の速度の表示</li>
+    <li>道路データの配信および更新</li>
+    <li>無料期間（最初の道路データのダウンロードから 14 日間）の管理。端末識別用の値は、本アプリの再インストールによって無料期間が再度開始されることを防ぐ目的にのみ利用し、他の情報と結び付けることはありません。この値から利用者個人を特定することはできません。</li>
+  </ul>
 
-  <h2>9. プライバシーポリシーの変更</h2>
-  <p>本ポリシーを変更した場合は、このページに掲載し、最終更新日を改めます。</p>
+  <h2>4. 第三者への提供</h2>
+  <p>開発者は、法令に基づく場合を除き、利用者の情報を第三者に販売・提供・開示しません。</p>
 
-  <h2>10. お問い合わせ</h2>
-  <p>本ポリシーに関するご質問は、GitHub Issues（<a href="https://github.com/osprey74/limes/issues">https://github.com/osprey74/limes/issues</a>）までお知らせください。</p>
+  <h2>5. 外部サービスとの通信</h2>
+  <p>本アプリは、以下のサービスと通信します。</p>
+  <ul>
+    <li><strong>Cloudflare</strong>：道路データの配信、および無料期間の記録に使用します。通信に際して、IP アドレス等の接続情報が Cloudflare, Inc. に送信されます。開発者は、これらの情報を利用者の識別に利用しません。（<a href="https://www.cloudflare.com/privacypolicy/">Cloudflare プライバシーポリシー</a>）</li>
+    <li><strong>Apple</strong>（iPhone 版）：App Store による有料プランの購入処理および登録状況の確認、ならびに現在地の都道府県の判定に使用します。（<a href="https://www.apple.com/legal/privacy/">Apple プライバシーポリシー</a>）</li>
+    <li><strong>Google</strong>（Android 版）：Google Play による有料プランの購入処理および登録状況の確認、位置情報の取得、ならびに現在地の都道府県の判定に使用します。（<a href="https://policies.google.com/privacy">Google プライバシーポリシー</a>）</li>
+  </ul>
+  <p>有料プランの登録状況は端末上でストアに確認するのみであり、その結果を開発者のサーバーに送信することはありません。</p>
+
+  <h2>6. データの保存および削除</h2>
+  <ul>
+    <li>アプリ設定および道路データは、利用者の端末内にのみ保存されます。道路データは設定画面から都道府県単位で削除でき、本アプリを削除するとすべて消去されます。</li>
+    <li>iPhone 版では、端末識別用の値のもととなる ID を端末のキーチェーンに保存します。この ID は本アプリを削除しても端末に残り、端末のバックアップから復元した場合は復元先の端末に引き継がれます。</li>
+    <li>開発者のサーバーに保存した端末識別用の値は、無料期間の再開始を防ぐために保持します。この値は利用者個人と結び付いていないため、開発者が特定の利用者の値を識別することはできません。</li>
+  </ul>
+
+  <h2>7. 子どものプライバシー</h2>
+  <p>本アプリは自動車の運転者を対象としており、13 歳未満の児童を対象としていません。開発者は、意図的に児童の個人情報を収集しません。</p>
+
+  <h2>8. ポリシーの変更</h2>
+  <p>本ポリシーを変更した場合は、このページを更新し、最終更新日を改定します。</p>
+
+  <h2>9. お問い合わせ</h2>
+  <p>プライバシーに関するご質問は、GitHub Issues（<a href="https://github.com/osprey74/limes/issues">https://github.com/osprey74/limes/issues</a>）までお知らせください。</p>
 </div>
 
 <hr>
@@ -98,58 +102,62 @@
   <h1>Privacy Policy</h1>
   <p class="updated">Last updated: November 15, 2026</p>
 
-  <p>Limes ("the App") is an app for iPhone and Android by the individual developer osprey74. It estimates the speed limit of the road you are driving on from open data and shows it. This policy describes the information the App handles.</p>
+  <p>This Privacy Policy describes how the Limes app ("the App"), provided by the individual developer osprey74 ("the Developer", "we"), handles information about you.</p>
 
-  <h2>1. Location</h2>
-  <p>The App uses the device's location to find the road you are driving on, estimate its speed limit and show your current speed.</p>
+  <h2>1. Information We Collect</h2>
+  <p>The App obtains the following information.</p>
   <ul>
-    <li>Finding the road and showing the speed happen on the device only. The location is never sent to the developer's server.</li>
-    <li>With "add the current prefecture automatically" on (the default), the App sends the current location to the OS's address lookup (Apple's service on iPhone, Google's on Android) to learn which prefecture you are in: once every 3 km or so, or every 10 minutes. You can turn the setting off in the settings; with it off, the location is sent nowhere.</li>
-    <li>The location is read only while you are using the App.</li>
-    <li>No route or location history is kept.</li>
+    <li><strong>Location data</strong>: Used to identify the road you are driving on, estimate its speed limit, and display your current speed. This processing takes place on your device only, and the location is not sent to the Developer's server. Location is accessed only while the App is in use, and no route or location history is stored.</li>
+    <li><strong>Location data for determining the current prefecture</strong>: Only when "add the current prefecture automatically" is enabled (enabled by default), the App sends your current location to the address lookup service provided by the operating system (Apple on iPhone, Google on Android) to determine the prefecture you are in. This occurs about once every 3 km of travel or every 10 minutes. If you disable the setting, no location is sent.</li>
+    <li><strong>Device-distinguishing value</strong>: A SHA-256 hash of a per-device ID. On iPhone the ID is a random ID generated by the App and stored on the device; on Android it is derived from the Android ID. The ID itself is not sent. The value is sent to the Developer's server once, at the first download of road data, together with the type of operating system (iOS or Android), and is stored with the date and time it was first received.</li>
+    <li><strong>Prefectures to download</strong>: The App requests from the distribution server the road data of the prefectures you select and, when automatic addition is enabled, of the prefecture you are in. The location itself is not sent to the distribution server.</li>
+    <li><strong>App settings and road data</strong>: Stored only on your device.</li>
   </ul>
 
-  <h2>2. Information sent to the developer's server</h2>
-  <p>To manage the free trial (14 days from the first data download), the App sends the following to the developer's server once, where it is stored.</p>
+  <h2>2. Information We Do Not Collect</h2>
+  <p>The App does not collect or transmit:</p>
   <ul>
-    <li><strong>A value that tells devices apart</strong>: the SHA-256 hash of a per-device ID. On iPhone the ID is a random one the App creates and keeps on the device; on Android it is derived from the Android ID. The ID itself is not sent.</li>
-    <li><strong>The kind of OS</strong>: iOS or Android.</li>
-    <li><strong>When it was first sent</strong>: recorded as the start of the free trial.</li>
-  </ul>
-  <p>It is sent when road data is downloaded for the first time. The value is used only so that deleting and reinstalling the App does not start the free trial again. It is not combined with a name, an email address, the location or anything else, and it cannot be used to identify you.</p>
-  <p>On iPhone, the ID is kept in the device's keychain and stays when the App is deleted. When a device is restored from a backup, it is carried over to the new device.</p>
-
-  <h2>3. Downloading road data</h2>
-  <p>The App downloads the road data of the prefectures you choose from a distribution server and keeps it on the device. With "add the current prefecture automatically" on (the default), it also downloads the data of the prefecture you are in. Only the request for those prefectures' data is sent to the distribution server, never the location itself. As with visiting any website, connection information such as the IP address reaches the operator of the distribution service (Cloudflare, Inc.). The developer does not use it to identify users.</p>
-
-  <h2>4. Paid plan (subscription)</h2>
-  <p>Purchases and payments are handled by the App Store (Apple) or Google Play (Google). The developer does not receive your name, payment method, or Apple Account or Google account information. The App only asks the store, on the device, whether a subscription is active, and does not send the answer to the developer's server.</p>
-
-  <h2>5. Services used</h2>
-  <ul>
-    <li>Cloudflare (distribution of road data, the free-trial record): <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare Privacy Policy</a></li>
-    <li>App Store (purchases on iPhone) and Apple's address lookup (finding the current prefecture on iPhone): <a href="https://www.apple.com/legal/privacy/">Apple Privacy Policy</a></li>
-    <li>Google Play (purchases on Android) and Google services (reading the location and finding the current prefecture on Android): <a href="https://policies.google.com/privacy">Google Privacy Policy</a></li>
-  </ul>
-  <p>The App contains no advertising, no analytics and no tracking. There is no account to register.</p>
-
-  <h2>6. Disclosure to third parties</h2>
-  <p>The information the App handles is not sold or provided to third parties, except where required by law.</p>
-
-  <h2>7. Storage and deletion</h2>
-  <ul>
-    <li>Settings and road data are kept on the device. Road data can be deleted prefecture by prefecture in the settings, and all of it is erased when the App is deleted.</li>
-    <li>The value that tells devices apart is kept on the developer's server so that a reinstall cannot restart the free trial. Because it is not linked to a person, the developer cannot find the value of a particular user.</li>
+    <li>Names, email addresses, phone numbers, or other personally identifiable information (the App has no account registration)</li>
+    <li>Advertising identifiers (IDFA, advertising ID)</li>
+    <li>Behavioral logs or analytics data (no advertising, analytics, or tracking SDK is used)</li>
+    <li>Payment information (purchases and payments for the paid plan are processed by the App Store or Google Play; the Developer does not receive your name, payment method, or Apple Account or Google account information)</li>
   </ul>
 
-  <h2>8. Age</h2>
-  <p>The App is intended for drivers. It does not knowingly collect personal information from children under 13.</p>
+  <h2>3. Purposes of Use</h2>
+  <p>The information obtained is used only for the following purposes.</p>
+  <ul>
+    <li>Estimating the speed limit of the road being driven on and displaying the current speed</li>
+    <li>Distributing and updating road data</li>
+    <li>Managing the free trial (14 days from the first download of road data). The device-distinguishing value is used solely to prevent the free trial from starting again when the App is reinstalled, and is not combined with any other information. You cannot be identified from this value.</li>
+  </ul>
 
-  <h2>9. Changes to this policy</h2>
-  <p>Changes are posted on this page with a new date of last update.</p>
+  <h2>4. Sharing with Third Parties</h2>
+  <p>We do not sell, share, or disclose your information to third parties, except as required by law.</p>
 
-  <h2>10. Contact</h2>
-  <p>For questions about this policy, please use GitHub Issues: <a href="https://github.com/osprey74/limes/issues">https://github.com/osprey74/limes/issues</a>.</p>
+  <h2>5. External Services</h2>
+  <p>The App communicates with the following services.</p>
+  <ul>
+    <li><strong>Cloudflare</strong>: Used to distribute road data and to record the free trial. Connection information such as your IP address is transmitted to Cloudflare, Inc. in the course of communication. We do not use this information to identify users. (<a href="https://www.cloudflare.com/privacypolicy/">Cloudflare Privacy Policy</a>)</li>
+    <li><strong>Apple</strong> (iPhone): Used for purchase processing and subscription status checks by the App Store, and for determining the current prefecture. (<a href="https://www.apple.com/legal/privacy/">Apple Privacy Policy</a>)</li>
+    <li><strong>Google</strong> (Android): Used for purchase processing and subscription status checks by Google Play, for obtaining the location, and for determining the current prefecture. (<a href="https://policies.google.com/privacy">Google Privacy Policy</a>)</li>
+  </ul>
+  <p>The subscription status is checked with the store on your device only, and the result is not sent to the Developer's server.</p>
+
+  <h2>6. Data Storage and Deletion</h2>
+  <ul>
+    <li>App settings and road data are stored only on your device. Road data can be deleted by prefecture from the settings screen, and all of it is erased when the App is deleted.</li>
+    <li>On iPhone, the ID from which the device-distinguishing value is derived is stored in the device's keychain. It remains on the device after the App is deleted, and is carried over to the destination device when restoring from a backup.</li>
+    <li>The device-distinguishing value stored on the Developer's server is retained to prevent the free trial from being restarted. Because the value is not linked to any individual, the Developer cannot identify the value belonging to a particular user.</li>
+  </ul>
+
+  <h2>7. Children's Privacy</h2>
+  <p>The App is intended for drivers and is not directed at children under the age of 13. We do not knowingly collect personal information from children.</p>
+
+  <h2>8. Changes to This Policy</h2>
+  <p>If we update this policy, we will revise this page and its date of last update.</p>
+
+  <h2>9. Contact</h2>
+  <p>For privacy-related questions, please contact us via GitHub Issues at <a href="https://github.com/osprey74/limes/issues">https://github.com/osprey74/limes/issues</a>.</p>
 </div>
 
 </body>
