@@ -27,7 +27,8 @@ final class Access {
     @ObservationIgnored private let settings: Settings
     @ObservationIgnored private unowned let data: DataModel
     @ObservationIgnored private let trial = TrialClient(url: Config.trialURL)
-    @ObservationIgnored private let billing = Billing()
+    /// The store side: plans, purchase and restore for the plans screen.
+    @ObservationIgnored let billing = Billing()
     @ObservationIgnored private var refreshing: Task<AccessState, Never>?
 
     static let trialLength: TimeInterval = 14 * 24 * 60 * 60
@@ -39,6 +40,7 @@ final class Access {
         self.data = data
         settings = data.settings
         state = Self.resolve(subscribed: nil, settings: data.settings, now: Date())
+        billing.onChange = { [weak self] in _ = await self?.refresh() }
     }
 
     /// Asks the store and, when needed, the ledger; one at a time.

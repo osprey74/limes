@@ -147,6 +147,7 @@ POST https://limes-trial.osprey74.workers.dev/v1/trial
 - 価格ポイントに望みの金額があるかは App Store Connect で確かめる（未確認）
 - 有料プラン画面（`…/ui/SubscribeScreen.kt`）：状態（無料期間の残り日数と終了日／終了／登録済み）、できること（最高速度の表示、データのダウンロードと自動更新）、「登録しなくても、GPS による現在の速度はいつでも表示されます」、月額・年額と登録ボタン（年額は「月あたり◯円（月額の12か月分より◯%お得）」をストアの価格から計算）、自動更新と解約方法の説明、「定期購入を管理」（iOS は `showManageSubscriptions` か App Store の管理画面）
 - 「購入を復元」ボタンは App Store では必要とされることが多い（審査ガイドライン 3.1.1 の扱いは要確認）。StoreKit 2 なら `AppStore.sync()`
+- iOS版の実装（2026-11-15、`ios/Limes/Access/Billing.swift`・`SubscribeScreen.swift`）：登録の有無は `Transaction.currentEntitlements` で見て、なければ `Product.SubscriptionInfo.status(for:)` が `.inGracePeriod` の間も登録済みとする。データの削除は Android版と同じく、最後に登録を確認してから60日後。「購入を復元」と「サブスクリプションを管理」（`manageSubscriptionsSheet`）を置いた。Xcode の StoreKit テスト用の設定は `ios/Limes.storekit`（月額500円・年額4,800円）。年額の注記は表示価格（`displayPrice`）から金額を読んで計算する（Xcode 27.2 のテスト用ストアでは4,800円の `Product.price` が 4 になるため）。Xcode の StoreKit テストで、プランと価格の表示、購入、登録済みの表示、取引を削除すると無料期間に戻ることを確かめた（2026-11-15）。「購入を復元」と「サブスクリプションを管理」、期間終了からの登録、60日後の削除は未確認
 
 ## 9. 利用状態と制限
 

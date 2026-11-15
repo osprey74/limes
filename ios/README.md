@@ -1,6 +1,6 @@
 # ios
 
-iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings, download and plans screens, data updates (at launch, on return to the front and daily while in use; foreground transfers only) and the free trial (recorded by `server/`, with the limits once it is over). Still to come: the subscription (StoreKit 2; until then the store counts as unreachable, so nothing is deleted when a trial ends), the launch screen and icon, and updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
+iOS app (Swift / SwiftUI, StoreKit 2). So far: the driving, settings, download and plans screens, data updates (at launch, on return to the front and daily while in use; foreground transfers only), the free trial (recorded by `server/`, with the limits once it is over) and the subscription (StoreKit 2: the plans with their prices from the store, purchase, restore, and the system's manage-subscriptions sheet). Still to come: the launch screen and icon, and updates in the background. What the app has to do, screen by screen, is in `../docs/ios-handoff.md` (taken from the Android app).
 
 | Item | Value |
 | --- | --- |
@@ -31,5 +31,11 @@ The script sets `IPHONEOS_DEPLOYMENT_TARGET` to the app's deployment target; kee
 scripts/build-core.sh
 open Limes.xcodeproj
 ```
+
+## Subscription
+
+The products are `com.osprey74.limes.premium.monthly` and `com.osprey74.limes.premium.yearly`, in one subscription group, with no introductory offer (the free trial is the app's own). Prices come from the store; none is written in the app.
+
+`Limes.storekit` is a StoreKit configuration for local testing, and the shared `Limes` scheme uses it, so a run from Xcode shows the two plans and lets you buy, renew, expire and refund them without App Store Connect (Debug > StoreKit > Manage Transactions). Its prices are ¥500 a month and ¥4,800 a year. The note under the yearly plan ("月あたり ¥400（月額の12か月分より20%お得）") is worked out from the displayed prices, because Xcode's test store (27.2) gives `Product.price` as 4 for ¥4,800. It applies only to runs started from Xcode: an app launched any other way asks the App Store, and until the products exist in App Store Connect the plans screen says it can't show them.
 
 Signing: choose your team under Signing & Capabilities before running on a device (none is set in the project). The simulator needs no team.

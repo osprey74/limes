@@ -51,3 +51,20 @@ iOS版の準備で Android版（`android/`）のコードを読んだときに�
 `…/data/Settings.kt` の `autoAddCurrent` のコメントは「Add the prefecture the car is in and its neighbours」だが、実装（`…/drive/DriveModel.kt` の `maybeAddCurrentPrefecture`）が追加するのは今いる県だけ。県境を越えると、越えた先の県が「今いる県」になって追加される。コメントを実装に合わせる。
 
 設定画面の説明「県境を越えると隣の県も取得します」は実装どおりなので、変えない。
+
+## 3. 年額プランの「◯%お得」が切り上がる
+
+状態：未修正（2026-11-15、iOS版の課金を実装したときに見つけた。コードを読んで見つけたもので、実機では見ていない）
+
+`…/ui/SubscribeScreen.kt` の `yearlyNote`（160行目）。年額が月額12か月分の何%にあたるかを整数の割り算で切り捨ててから100から引くので、割引率は切り上がる。例：月額500円・年額5,000円なら実際は16.67%だが「17%お得」と出る。割り切れる価格（例：月額500円・年額4,800円で20%）では差は出ない。
+
+```kotlin
+val saving = (100 - yearly.priceMicros * 100 / (monthly.priceMicros * 12)).toInt()
+```
+
+直し方の案：割引率のほうを切り捨てる（iOS版は切り捨てにしてある。`ios/Limes/Access/SubscribeScreen.swift` の `yearlyNote`）。
+
+```kotlin
+val full = monthly.priceMicros * 12
+val saving = ((full - yearly.priceMicros) * 100 / full).toInt()
+```
