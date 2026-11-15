@@ -11,7 +11,7 @@
 | 位置情報（道路の特定と速度の表示） | 出ない。端末内で処理する。使用中のみ取得し、履歴は保存しない | `ios/Limes/Drive/DriveModel.swift`（`requestWhenInUseAuthorization`）、`android/app/src/main/AndroidManifest.xml`（バックグラウンドの位置情報の権限なし） |
 | 位置情報（いまいる都道府県を調べる） | 出る。自動追加が有効（既定）のとき、3 km 移動するごとか10分ごとに、OS の逆ジオコーディング（iOS は `CLGeocoder` で Apple、Android は `Geocoder` で Google）へ現在地を送る。開発者のサーバーには届かない | `ios/Limes/Drive/DriveModel.swift`・`android/…/drive/DriveModel.kt` の `maybeAddCurrentPrefecture` |
 | 端末を区別する値（ID の SHA-256） | 出る。最初のデータダウンロードのときに一度、OS の種類とともに `server/` へ送り、最初に届いた日時と合わせて保存する | `ios/Limes/Access/TrialClient.swift`、`android/…/access/TrialClient.kt`、`server/schema.sql` |
-| 取得する都道府県 | 出る。データ配信（Cloudflare R2）への要求として。自動追加が有効なら、いまいる県も要求する | `ios/Limes/Data/DataServer.swift`、`DriveModel.swift` |
+| 取得する都道府県 | 出る。データ配信（お名前.com のレンタルサーバー `limes.osprey74.com`）への要求として。自動追加が有効なら、いまいる県も要求する。iOS 版は配信 URL を切り替えるまで Cloudflare R2 へ要求する | `android/…/data/DataServer.kt`、`ios/Limes/Data/DataServer.swift`、`DriveModel.swift` |
 | 購入の情報 | 開発者には届かない。登録の有無を端末上でストアに確認するだけ | `ios/Limes/Access/Billing.swift` |
 | 広告・解析・トラッキング | なし。該当する SDK を入れていない | `android/app/build.gradle.kts` の依存、iOS は外部ライブラリなし |
 
@@ -19,7 +19,7 @@
 
 - 本文：`site/privacy/index.html`（日本語と英語を1ページに）
 - 公開先：`https://limes.osprey74.com/privacy/` を予定（配信ドメインは 2026-11-15 に `limes.osprey74.com` と決定。`docs/data-hosting.md`。まだ置いていない。置いたら App Store Connect と Google Play Console に URL を登録する）
-- アプリの配信 URL をお名前.com のサーバーに切り替えるときは、上の表の「取得する都道府県」と下の 3、ポリシー本文にある「Cloudflare R2」を、お名前.com のサーバーに書き換える。申告の内容は変えない（2026-11-15決定。`docs/data-hosting.md` の 6）
+- データの取得先は、お名前.com のレンタルサーバー（運営：GMOインターネット株式会社）として書いてある（2026-11-16、Android 版の配信 URL の切り替えに合わせて、上の表・下の 3・ポリシー本文を書き換えた）。申告の内容は変えていない（2026-11-15決定。`docs/data-hosting.md` の 6）。iOS 版の配信 URL はまだ切り替えていないので、ポリシーを公開する前に切り替える
 - 問い合わせ先：GitHub Issues（<https://github.com/osprey74/limes/issues>）
 - アプリの挙動を変えたら（送信する情報、外部サービス、位置情報の使い方）、ポリシー・下の申告・`ios/Limes/PrivacyInfo.xcprivacy` の3つをそろえて直す
 
@@ -37,7 +37,7 @@
   - 収集の定義："Collect" refers to transmitting data off the device in a way that allows you and/or your third-party partners to access it for a period longer than what is necessary to service the transmitted request in real time.
   - 端末内の処理："Data that is processed only on device is not "collected" and does not need to be disclosed in your answers. If you derive anything from that data and send it off device, the resulting data should be considered separately."（道路の特定と速度の表示がこれに当たる）
   - Apple のフレームワーク："If you collect data about your app from Apple frameworks or services, you should indicate what data you collect and how you use it. You are not responsible for disclosing data collected by Apple."（`CLGeocoder` へ送る現在地がこれに当たる。開発者も、開発者がコードを組み込んだ外部の事業者も受け取らない）
-  - 位置から導いた「いまいる都道府県」は、データの要求として配信サーバー（Cloudflare R2）へ送られる。開発者がこの要求の記録を読める形で残していなければ収集に当たらない。R2 のアクセスログを有効にする場合は、「おおよその位置情報」の申告が要るかを見直す
+  - 位置から導いた「いまいる都道府県」は、データの要求として配信サーバー（お名前.com のレンタルサーバー）へ送られる。開発者がこの要求の記録を読める形で残していなければ収集に当たらない。県名入りのファイル名の取得要求は、申告を変えるほどの情報ではないと判断し、サーバーのアクセス記録の有無は調べていない（2026-11-15決定。`docs/data-hosting.md` の 6）
 - 購入履歴も入れない（開発者は受け取らない）
 - 送っているのはアプリが作った ID のハッシュだが、入れ直しても同じ値で端末を区別するので、デバイス ID として申告する（控えめな側の判断。Apple に確かめたものではない）
 - プライバシーマニフェスト：`ios/Limes/PrivacyInfo.xcprivacy`。収集データ（デバイス ID、アプリの機能、関連付けなし、トラッキングなし）と、理由の申告が要る API（UserDefaults：CA92.1、ファイルのタイムスタンプ：C617.1。後者は Rust コアが `stat` 系を呼ぶため）

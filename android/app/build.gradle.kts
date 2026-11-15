@@ -18,10 +18,9 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
-        // Where manifest.json and the databases are published. r2.dev while in
-        // development; https://limes.osprey74.com/data/ replaces it for release
-        // (docs/data-hosting.md).
-        buildConfigField("String", "DATA_BASE_URL", "\"https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/\"")
+        // Where manifest.json and the databases are published
+        // (docs/data-hosting.md). Must end with a slash.
+        buildConfigField("String", "DATA_BASE_URL", "\"https://limes.osprey74.com/data/\"")
         // Records when each device started its free trial (server/).
         buildConfigField("String", "TRIAL_URL", "\"https://limes-trial.osprey74.workers.dev/v1/trial\"")
     }
