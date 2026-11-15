@@ -5,10 +5,15 @@
 #   boundaries  prefecture boundaries from the whole-Japan extract
 #   build       one job per region, in parallel
 #   publish     merge the regions' outputs, upload, prune old builds, report failures
+#   mirror      copy manifest.json and the databases to https://limes.osprey74.com/data/,
+#               which the apps read (the bucket itself is the pipeline's store)
 #
 # Repository settings:
 #   secrets R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (R2 API token, Object Read & Write)
 #   variable R2_BUCKET
+#   secrets MIRROR_FTP_USER, MIRROR_FTP_PASSWORD (FTP account limited to the limes.osprey74.com
+#     folder; without them the mirror job does nothing)
+#   variable MIRROR_FTP_DIR (the data folder as that account sees it; default /data)
 name: data-release
 
 on:
@@ -26,6 +31,10 @@ on:
         default: ""
       accept_stage1:
         description: Let the gate pass a stage-1 change, once (rebuild after a pipeline change)
+        type: boolean
+        default: false
+      mirror_only:
+        description: Copy the bucket to limes.osprey74.com even when nothing is built
         type: boolean
         default: false
 
@@ -244,3 +253,78 @@ jobs:
             gh issue create --title "$title" --body "$body"
           fi
           exit 1
+
+  # The bucket is the source: whatever it publishes after this run (also when
+  # some prefectures failed and keep their versions) is copied as it is.
+  mirror:
+    needs: [plan, publish]
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      (inputs.mirror_only || (needs.publish.result != 'skipped' && needs.publish.result != 'cancelled'))
+    runs-on: ubuntu-latest
+    env:
+      FTP_HOST: www1135.onamae.ne.jp # the name on the server's certificate (*.onamae.ne.jp)
+      FTP_USER: ${{ secrets.MIRROR_FTP_USER }}
+      LFTP_PASSWORD: ${{ secrets.MIRROR_FTP_PASSWORD }}
+      FTP_DIR: ${{ vars.MIRROR_FTP_DIR || '/data' }}
+      PUBLIC_URL: https://limes.osprey74.com/data/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch what the bucket publishes
+        if: env.FTP_USER != ''
+        run: |
+          mkdir -p data/mirror
+          aws s3 cp "$BUCKET/manifest.json" data/mirror/ --endpoint-url "$R2_ENDPOINT"
+          aws s3 sync "$BUCKET/" data/mirror/ --endpoint-url "$R2_ENDPOINT" \
+            --exclude "*" --include "*.sqlite.zst" --exclude "*/*"
+          cp publish/htaccess data/mirror/.htaccess
+
+      # Databases first, manifest.json after them, and only then the ones the
+      # bucket no longer has. Names carry the version, so equal size means equal file.
+      - name: Upload
+        if: env.FTP_USER != ''
+        run: |
+          case "$FTP_DIR" in
+            */data) ;;
+            *) echo "::error::MIRROR_FTP_DIR must end in /data (the folder is cleaned to match the bucket)"; exit 1 ;;
+          esac
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          lftp -c "
+            set cmd:fail-exit yes
+            set ftp:ssl-force yes
+            set ftp:ssl-protect-data yes
+            set ssl:verify-certificate yes
+            set ssl:check-hostname yes
+            set net:max-retries 3
+            set net:timeout 30
+            open --user '$FTP_USER' --env-password ftp://$FTP_HOST
+            mkdir -p -f '$FTP_DIR'
+            cd '$FTP_DIR'
+            mirror -R --ignore-time --no-perms --exclude-glob manifest.json data/mirror/ ./
+            put data/mirror/manifest.json -o manifest.json
+            mirror -R --ignore-time --no-perms --delete data/mirror/ ./
+          "
+
+      # What the apps will get: the same manifest, and every database it lists at its size.
+      - name: Check the public copy
+        if: env.FTP_USER != ''
+        run: |
+          agent="limes-pipeline (+https://github.com/osprey74/limes)"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS -A "$agent" -o data/public-manifest.json "${PUBLIC_URL}manifest.json" \
+              && cmp -s data/public-manifest.json data/mirror/manifest.json; then
+              break
+            fi
+            if [ "$attempt" = 6 ]; then
+              echo "::error::${PUBLIC_URL}manifest.json is not the bucket's manifest"; exit 1
+            fi
+            sleep 20
+          done
+          jq -r '.prefectures[] | "\(.path) \(.size)"' data/mirror/manifest.json | while read -r path size; do
+            got="$(curl -fsSI -A "$agent" "${PUBLIC_URL}$path" | tr -d '\r' \
+              | awk 'tolower($1) == "content-length:" { print $2 }')"
+            if [ "$got" != "$size" ]; then
+              echo "::error::$path: expected $size bytes, got ${got:-no answer}"; exit 1
+            fi
+          done

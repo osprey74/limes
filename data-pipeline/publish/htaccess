@@ -1,0 +1,10 @@
+# Uploaded as .htaccess to https://limes.osprey74.com/data/ by the data-release workflow.
+#
+# The server's nginx cache otherwise keeps serving the previous manifest.json
+# for a while after an upload. With no-cache the apps revalidate every time
+# and get a 304 when nothing changed.
+<IfModule mod_headers.c>
+  <Files "manifest.json">
+    Header set Cache-Control "no-cache"
+  </Files>
+</IfModule>
