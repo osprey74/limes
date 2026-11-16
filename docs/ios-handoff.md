@@ -187,6 +187,6 @@ iOS版でも Sandbox と StoreKit の設定ファイル（Xcode の StoreKit テ
 
 下書きと申告の内容は `docs/release-prep.md` にまとめた（2026-11-15）。
 
-- プライバシーポリシー：`site/privacy/index.html`（公開先は `limes.osprey74.com/privacy/` を予定）
+- プライバシーポリシー：`site/privacy/index.html`（公開先は `https://limes.osprey74.com/privacy/`。2026-11-16 公開）
 - App Store のプライバシー情報：端末の識別子（ハッシュ）を無料期間の管理のために送る。位置情報は開発者のサーバーへは送らないが、自動追加が有効なときは、いまいる都道府県を調べるために OS の逆ジオコーディング（iOS は `CLGeocoder`、Android は `Geocoder`）へ現在地を送る。「位置情報は端末の外に出さない」とは書けない
 - 審査メモ：運転中の利用を前提とするアプリであること、速度超過の警告を出さないこと、表示は推定であることの説明

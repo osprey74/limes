@@ -87,7 +87,7 @@ Workers（`workers.dev`）：
 1. （済み。5 を参照）
 2. （済み。5 を参照）
 3. （済み。2026-11-16）R2 の `r2.dev` での公開を止めた。`r2.dev` の URL は `manifest.json`・`state.json`・県別データとも 401 を返し、`https://limes.osprey74.com/data/manifest.json` は 200 のままであることを確かめた。バケットの中身は外から取れなくなった
-4. プライバシーポリシー（`site/privacy/index.html`）を `https://limes.osprey74.com/privacy/` に置き、ストアに URL を登録する。置き方は自動（2026-11-16決定）：`site/` を変えたコミットが `main` に入ると、`.github/workflows/site.yml` が `mirror` と同じ FTP アカウントでアップロードし、公開されたページがリポジトリの内容と一致することを確かめる。ファイルは足すか置き換えるだけで、消さない。`data` フォルダには触れない
+4. ストアにプライバシーポリシーの URL `https://limes.osprey74.com/privacy/` を登録する。ページは 2026-11-16 に公開した（リポジトリの `site/privacy/index.html` と一致、`text/html; charset=UTF-8`）。置き方は自動（2026-11-16決定）：`site/` を変えたコミットが `main` に入ると、`.github/workflows/site.yml` が `mirror` と同じ FTP アカウントでアップロードし、公開されたページがリポジトリの内容と一致することを確かめる。ファイルは足すか置き換えるだけで、消さない。`data` フォルダには触れない
 5. 定期実行が止まることへの備え。公開リポジトリでは、60日間リポジトリに動きがないと、定期実行が自動で無効になる（GitHub の仕様）
 6. 証明書の期限切れに気づく仕組み。`mirror` の確認は `mirror` が動いた日にしか行われない
 7. （済み。2026-11-16）アプリから独自の User-Agent を送る。`workers.dev` のチェックの対象が将来変わることへの備え。値は `Limes/<アプリの版> (Android)`・`Limes/<アプリの版> (iOS)` で、端末の機種や OS の版は入れない（`android/…/UserAgent.kt`、`ios/Limes/Config.swift` の `userAgent`）。データの取得と無料期間の記録の両方に付ける。この値でお名前.com のサーバーから取得でき、Workers まで届くことを確かめた。iOS 版は Xcode でビルドでき、この値で `manifest.json` を取得できた（2026-11-16、シミュレーター）。無料期間の記録も、アプリが覚えている終了日を消して起動し直すと、Workers から同じ終了日を受け取り直した（同日、シミュレーター）。実機ではまだ確かめていない
