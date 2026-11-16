@@ -62,26 +62,23 @@ h1 span { display: inline-block; } /* Japanese phrases that must not break insid
 .stores li { font-size: 14px; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; padding: 10px 16px; }
 .stores strong { color: var(--text); font-weight: 600; margin-right: 6px; }
 
-/* ---------- the driving screen, redrawn ---------- */
-.phone { width: min(100%, 320px); margin: 0 auto; background: var(--ground); border: 1px solid var(--border); border-radius: 40px; padding: 18px 18px 16px; box-shadow: 0 0 0 7px #05070a, 0 0 0 8px var(--line), 0 40px 90px rgba(0, 0, 0, 0.6); }
-.phone .meta { text-align: center; color: var(--muted); font-size: 11px; margin: 4px 0 14px; }
-.phone .road { text-align: center; font-weight: 700; font-size: 19px; margin-bottom: 10px; }
-.phone .sign { margin: 0 auto 12px; }
-.phone .pill { margin: 0 auto 20px; }
-.phone .rule { height: 1px; background: var(--line); margin: 0 0 14px; }
-.phone .label { text-align: center; color: var(--muted); font-size: 13px; }
-.phone .speed { display: flex; justify-content: center; align-items: flex-end; gap: 8px; font-family: var(--figures); font-weight: 700; font-size: 104px; line-height: 1; letter-spacing: -3px; }
-.phone .speed span { font-family: var(--body); font-size: 20px; letter-spacing: 0; color: var(--muted); font-weight: 600; padding-bottom: 14px; }
-.phone .gps { display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin: 8px 0 14px; }
-.phone .gps::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
-.phone .note { color: var(--muted); font-size: 10.5px; line-height: 1.6; text-align: center; margin: 0; }
+/* ---------- screenshots (iPhone, 804 x 1748) ---------- */
+.shot { display: block; width: min(100%, 300px); height: auto; margin: 0 auto; border: 1px solid var(--border); border-radius: 40px; box-shadow: 0 0 0 7px #05070a, 0 0 0 8px var(--line), 0 40px 90px rgba(0, 0, 0, 0.6); }
+.shots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; padding: 8px; }
+.shots .shot { border-radius: 26px; box-shadow: 0 0 0 5px #05070a, 0 0 0 6px var(--line), 0 24px 50px rgba(0, 0, 0, 0.5); }
+.shots figcaption { color: var(--muted); font-size: 13px; margin-top: 18px; }
 figure { margin: 0; }
 figcaption { text-align: center; color: var(--faint); font-size: 12px; margin-top: 22px; }
 
 /* The regulatory sign: white disc, red ring, blue figures. */
-.sign { --d: 168px; width: var(--d); height: var(--d); border-radius: 50%; background: #fff; border: calc(var(--d) * 0.091) solid var(--sign-red); display: grid; place-items: center; color: var(--sign-blue); font-family: var(--figures); font-weight: 700; font-size: calc(var(--d) * 0.47); letter-spacing: -2px; line-height: 1; }
+/* The figures are centered on their own shape, not on the font's line box: the
+   line is trimmed to the height of the figures where the browser can, and the
+   padding makes up for the spacing that follows the last figure. */
+.sign { --d: 168px; width: var(--d); height: var(--d); border-radius: 50%; background: #fff; border: calc(var(--d) * 0.091) solid var(--sign-red); display: grid; place-items: center; padding-right: 2px; color: var(--sign-blue); font-family: var(--figures); font-weight: 700; font-size: calc(var(--d) * 0.47); letter-spacing: -2px; line-height: 1; text-box: trim-both cap alphabetic; }
 .sign.low { border-color: var(--sign-red-faded); }
-.sign.none { background: transparent; border-color: var(--border); color: var(--faint); }
+/* Unknown: a bar, as in the app, drawn here so that it sits in the middle whatever the font. */
+.sign.none { position: relative; background: transparent; border-color: var(--border); padding: 0; font-size: 0; }
+.sign.none::before { content: ""; position: absolute; inset: 0; margin: auto; width: calc(var(--d) * 0.36); height: calc(var(--d) * 0.055); border-radius: 2px; background: var(--faint); }
 
 .pill { display: flex; width: fit-content; max-width: 100%; align-items: center; gap: 10px; background: var(--card); border-radius: 999px; padding: 7px 14px; font-size: 13px; white-space: nowrap; }
 .pill .bars { display: flex; gap: 3px; }
@@ -94,7 +91,7 @@ figcaption { text-align: center; color: var(--faint); font-size: 12px; margin-to
 section { padding: 72px 0; border-top: 1px solid var(--line); }
 .kicker { font-family: var(--figures); color: var(--accent); font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 10px; }
 h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); line-height: 1.4; margin: 0 0 14px; font-weight: 800; }
-.intro { color: var(--sub); max-width: 40em; margin: 0 0 40px; }
+.intro { color: var(--sub); margin: 0 0 40px; }
 
 .levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
 .levels li { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 26px 18px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; }
@@ -116,7 +113,7 @@ h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); line-height: 1.4; margin: 0 0 14px
 .plan .price { font-family: var(--figures); font-size: 2.6rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.5px; }
 .plan .price small { font-family: var(--body); font-size: 0.9rem; color: var(--muted); font-weight: 500; letter-spacing: 0; margin-left: 4px; }
 .plan p { color: var(--muted); font-size: 0.9rem; margin: 12px 0 0; line-height: 1.75; }
-.after { color: var(--sub); margin: 26px 0 0; max-width: 44em; }
+.after { color: var(--sub); margin: 26px 0 0; }
 
 .caution { background: var(--card); border-left: 4px solid var(--waiting); border-radius: 0 16px 16px 0; padding: 24px 28px; }
 .caution p { margin: 0; color: var(--sub); }
@@ -137,14 +134,13 @@ footer a { color: var(--sub); }
 @media (prefers-reduced-motion: no-preference) {
   .hero > * { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
   .hero > figure { animation-delay: 0.12s; }
-  .phone .sign { animation: settle 0.9s 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
-@keyframes settle { from { opacity: 0; transform: scale(0.82); } }
 
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 48px; padding: 24px 0 72px; }
   .levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 24px; }
   .plans { grid-template-columns: 1fr; }
   section { padding: 56px 0; }
 }
