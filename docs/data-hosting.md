@@ -86,7 +86,7 @@ Workers（`workers.dev`）：
 
 1. （済み。5 を参照）
 2. （済み。5 を参照）
-3. R2 の `r2.dev` での公開を止める。Android 版・iOS 版とも切り替えが済んだので、止められる。止めると、JARTIC の元 ZIP が外から取れる状態も解消する
+3. （済み。2026-11-16）R2 の `r2.dev` での公開を止めた。`r2.dev` の URL は `manifest.json`・`state.json`・県別データとも 401 を返し、`https://limes.osprey74.com/data/manifest.json` は 200 のままであることを確かめた。バケットの中身は外から取れなくなった
 4. プライバシーポリシー（`site/privacy/index.html`）を `https://limes.osprey74.com/privacy/` に置き、ストアに URL を登録する。置き方（手動か、自動か）は未定
 5. 定期実行が止まることへの備え。公開リポジトリでは、60日間リポジトリに動きがないと、定期実行が自動で無効になる（GitHub の仕様）
 6. 証明書の期限切れに気づく仕組み。`mirror` の確認は `mirror` が動いた日にしか行われない
