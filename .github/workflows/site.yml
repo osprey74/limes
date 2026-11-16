@@ -1,0 +1,94 @@
+# Publishes site/ (the privacy policy) to https://limes.osprey74.com/ whenever
+# it changes on main, and checks that the public pages are the repository's.
+#
+# site/privacy/index.html  ->  https://limes.osprey74.com/privacy/
+#
+# Files are added and replaced, never deleted, and nothing named data is
+# touched: https://limes.osprey74.com/data/ belongs to the data-release workflow.
+#
+# Repository settings (shared with data-release):
+#   secrets MIRROR_FTP_USER, MIRROR_FTP_PASSWORD (FTP account limited to the limes.osprey74.com folder)
+#   variable MIRROR_FTP_DIR (the data folder as that account sees it; default /data).
+#     The site goes to the folder above it.
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      FTP_HOST: www1135.onamae.ne.jp # the name on the server's certificate (*.onamae.ne.jp)
+      FTP_USER: ${{ secrets.MIRROR_FTP_USER }}
+      LFTP_PASSWORD: ${{ secrets.MIRROR_FTP_PASSWORD }}
+      FTP_DIR: ${{ vars.MIRROR_FTP_DIR || '/data' }}
+      PUBLIC_URL: https://limes.osprey74.com/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload
+        run: |
+          if [ -z "$FTP_USER" ]; then
+            echo "::error::MIRROR_FTP_USER and MIRROR_FTP_PASSWORD are not set"; exit 1
+          fi
+          case "$FTP_DIR" in
+            */data) ;;
+            *) echo "::error::MIRROR_FTP_DIR must end in /data (the site goes to the folder above it)"; exit 1 ;;
+          esac
+          if [ -e site/data ]; then
+            echo "::error::site/data would collide with the published data"; exit 1
+          fi
+          root="${FTP_DIR%/data}"
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          # Every file is sent again: an edit can leave the size as it was.
+          lftp -c "
+            set cmd:fail-exit yes
+            set ftp:ssl-force yes
+            set ftp:ssl-protect-data yes
+            set ssl:verify-certificate yes
+            set ssl:check-hostname yes
+            set net:max-retries 3
+            set net:timeout 30
+            open --user '$FTP_USER' --env-password ftp://$FTP_HOST
+            cd '${root:-/}'
+            mirror -R --transfer-all --no-perms --exclude '^data/' --exclude-glob '.*' site/ ./
+          "
+
+      # The server's nginx cache can keep serving the previous page for a
+      # minute or so after an upload (docs/data-hosting.md), hence the waiting.
+      - name: Check the public copy
+        run: |
+          agent="limes-pipeline (+https://github.com/osprey74/limes)"
+          (cd site && find . -type f ! -name '.*' | sed 's|^\./||' | sort) > files.txt
+          for attempt in 1 2 3 4 5 6; do
+            stale=""
+            while read -r file; do
+              # An index.html is checked at its folder's address, the one people are given.
+              case "$file" in
+                index.html) path="" ;;
+                */index.html) path="${file%index.html}" ;;
+                *) path="$file" ;;
+              esac
+              if ! curl -fsS -A "$agent" -o public.tmp "${PUBLIC_URL}$path" || ! cmp -s public.tmp "site/$file"; then
+                stale="$stale ${PUBLIC_URL}$path"
+              fi
+            done < files.txt
+            if [ -z "$stale" ]; then
+              echo "published: $(wc -l < files.txt) file(s)"; exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::not the repository's content:$stale"; exit 1
