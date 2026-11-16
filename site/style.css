@@ -1,0 +1,158 @@
+/* Limes official site. Colors are the app's (android/…/ui/Theme.kt, DriveScreen.kt).
+   No external requests: fonts are the reader's own. */
+:root {
+  --ground: #0b0d10;
+  --card: #15181d;
+  --inset: #1e2228;
+  --line: #23272e;
+  --border: #3a414b;
+  --text: #f2f4f7;
+  --sub: #c3c9d0;
+  --muted: #9aa3ae;
+  --faint: #6b7480;
+  --accent: #c8f169;
+  --ok: #34d3b8;
+  --waiting: #ffb020;
+  --sign-red: #d7262e;
+  --sign-red-faded: #eb9297;
+  --sign-blue: #1d4e9e;
+  --figures: "DIN Alternate", "Bahnschrift", "Roboto Condensed", "Helvetica Neue", "Arial Narrow", sans-serif;
+  --body: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: dark; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.85;
+  -webkit-text-size-adjust: 100%;
+  background-image: radial-gradient(900px 520px at 78% -8%, rgba(200, 241, 105, 0.07), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+a { color: var(--accent); text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- top bar ---------- */
+.bar { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+.brand { display: flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; font-weight: 700; letter-spacing: 0.04em; }
+.brand img { width: 36px; height: 36px; border-radius: 9px; display: block; }
+.bar nav { display: flex; gap: 20px; font-size: 14px; }
+.bar nav a { color: var(--sub); text-decoration: none; }
+.bar nav a:hover { color: var(--text); }
+
+/* ---------- hero ---------- */
+.hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 56px; align-items: center; padding: 48px 0 96px; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--waiting); }
+h1 { font-size: clamp(2rem, 5vw, 3.3rem); line-height: 1.28; letter-spacing: 0.01em; margin: 22px 0 22px; font-weight: 800; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+h1 span { display: inline-block; } /* Japanese phrases that must not break inside */
+.lead { color: var(--sub); font-size: 1.05rem; max-width: 34em; margin: 0; }
+.stores { margin: 30px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+.stores li { font-size: 14px; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; padding: 10px 16px; }
+.stores strong { color: var(--text); font-weight: 600; margin-right: 6px; }
+
+/* ---------- the driving screen, redrawn ---------- */
+.phone { width: min(100%, 320px); margin: 0 auto; background: var(--ground); border: 1px solid var(--border); border-radius: 40px; padding: 18px 18px 16px; box-shadow: 0 0 0 7px #05070a, 0 0 0 8px var(--line), 0 40px 90px rgba(0, 0, 0, 0.6); }
+.phone .meta { text-align: center; color: var(--muted); font-size: 11px; margin: 4px 0 14px; }
+.phone .road { text-align: center; font-weight: 700; font-size: 19px; margin-bottom: 10px; }
+.phone .sign { margin: 0 auto 12px; }
+.phone .pill { margin: 0 auto 20px; }
+.phone .rule { height: 1px; background: var(--line); margin: 0 0 14px; }
+.phone .label { text-align: center; color: var(--muted); font-size: 13px; }
+.phone .speed { display: flex; justify-content: center; align-items: flex-end; gap: 8px; font-family: var(--figures); font-weight: 700; font-size: 104px; line-height: 1; letter-spacing: -3px; }
+.phone .speed span { font-family: var(--body); font-size: 20px; letter-spacing: 0; color: var(--muted); font-weight: 600; padding-bottom: 14px; }
+.phone .gps { display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin: 8px 0 14px; }
+.phone .gps::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.phone .note { color: var(--muted); font-size: 10.5px; line-height: 1.6; text-align: center; margin: 0; }
+figure { margin: 0; }
+figcaption { text-align: center; color: var(--faint); font-size: 12px; margin-top: 22px; }
+
+/* The regulatory sign: white disc, red ring, blue figures. */
+.sign { --d: 168px; width: var(--d); height: var(--d); border-radius: 50%; background: #fff; border: calc(var(--d) * 0.091) solid var(--sign-red); display: grid; place-items: center; color: var(--sign-blue); font-family: var(--figures); font-weight: 700; font-size: calc(var(--d) * 0.47); letter-spacing: -2px; line-height: 1; }
+.sign.low { border-color: var(--sign-red-faded); }
+.sign.none { background: transparent; border-color: var(--border); color: var(--faint); }
+
+.pill { display: flex; width: fit-content; max-width: 100%; align-items: center; gap: 10px; background: var(--card); border-radius: 999px; padding: 7px 14px; font-size: 13px; white-space: nowrap; }
+.pill .bars { display: flex; gap: 3px; }
+.pill .bars i { width: 16px; height: 6px; border-radius: 3px; background: var(--border); }
+.pill .bars i.on { background: var(--text); }
+.pill b { font-weight: 500; }
+.pill span { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- sections ---------- */
+section { padding: 72px 0; border-top: 1px solid var(--line); }
+.kicker { font-family: var(--figures); color: var(--accent); font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 10px; }
+h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); line-height: 1.4; margin: 0 0 14px; font-weight: 800; }
+.intro { color: var(--sub); max-width: 40em; margin: 0 0 40px; }
+
+.levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.levels li { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 26px 18px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.levels .sign { --d: 112px; margin-bottom: 16px; }
+.levels .pill { margin-bottom: 14px; }
+.levels h3 { font-size: 1rem; margin: 0 0 6px; }
+.levels p { color: var(--muted); font-size: 0.9rem; line-height: 1.75; margin: 0; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; margin: 0; padding: 0; list-style: none; }
+.grid li { padding: 22px 0; border-top: 1px solid var(--line); }
+.grid li:nth-child(-n+2) { border-top: 0; }
+.grid h3 { font-size: 1.05rem; margin: 0 0 6px; }
+.grid p { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.plan { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 26px 24px; }
+.plan.first { border-color: var(--accent); }
+.plan h3 { font-size: 0.95rem; color: var(--sub); margin: 0 0 8px; font-weight: 600; }
+.plan .price { font-family: var(--figures); font-size: 2.6rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.5px; }
+.plan .price small { font-family: var(--body); font-size: 0.9rem; color: var(--muted); font-weight: 500; letter-spacing: 0; margin-left: 4px; }
+.plan p { color: var(--muted); font-size: 0.9rem; margin: 12px 0 0; line-height: 1.75; }
+.after { color: var(--sub); margin: 26px 0 0; max-width: 44em; }
+
+.caution { background: var(--card); border-left: 4px solid var(--waiting); border-radius: 0 16px 16px 0; padding: 24px 28px; }
+.caution p { margin: 0; color: var(--sub); }
+.caution p + p { margin-top: 10px; }
+.caution strong { color: var(--text); }
+
+.plain { margin: 0; padding: 0; list-style: none; }
+.plain li { padding: 14px 0; border-top: 1px solid var(--line); color: var(--sub); }
+.plain li:first-child { border-top: 0; padding-top: 0; }
+.plain span { display: block; color: var(--muted); font-size: 0.9rem; }
+
+footer { border-top: 1px solid var(--line); padding: 44px 0 64px; color: var(--muted); font-size: 0.85rem; line-height: 1.9; }
+footer h2 { font-size: 0.85rem; color: var(--sub); margin: 0 0 6px; font-weight: 600; }
+footer ul { margin: 0 0 24px; padding: 0; list-style: none; }
+footer a { color: var(--sub); }
+
+/* ---------- arrival ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .hero > * { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .hero > figure { animation-delay: 0.12s; }
+  .phone .sign { animation: settle 0.9s 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+}
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes settle { from { opacity: 0; transform: scale(0.82); } }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; gap: 48px; padding: 24px 0 72px; }
+  .levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plans { grid-template-columns: 1fr; }
+  section { padding: 56px 0; }
+}
+@media (max-width: 560px) {
+  .wrap { padding: 0 18px; }
+  .bar nav { gap: 14px; font-size: 13px; }
+  .grid { grid-template-columns: 1fr; }
+  .grid li:nth-child(2) { border-top: 1px solid var(--line); }
+  .levels { grid-template-columns: 1fr; }
+  .levels .pill { white-space: normal; }
+}

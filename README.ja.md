@@ -17,7 +17,7 @@ Limes は、走行中の道路の最高速度を公開データから推定し�
 | `android/` | Android アプリ（Kotlin／Jetpack Compose） |
 | `data-pipeline/` | Python パイプライン：JARTIC・OSM・国土地理院データの取り込み |
 | `server/` | 無料期間の記録と、データ更新の定期実行の見張り（Cloudflare Workers＋D1） |
-| `site/` | 公開するページ（プライバシーポリシー） |
+| `site/` | <https://limes.osprey74.com/> で公開するページ（公式サイトの日本語版・英語版、プライバシーポリシー） |
 | `docs/` | 設計メモ、データ検証レポート |
 
 ## データ出典

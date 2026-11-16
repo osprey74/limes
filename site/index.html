@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limes（リメス）– 走っている道の最高速度を、確度つきで</title>
+  <meta name="description" content="Limes は、走行中の道路の最高速度を公開データから推定し、GPS の速度と並べて表示する日本国内向けのアプリ（iOS／Android）です。">
+  <meta name="theme-color" content="#0b0d10">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="alternate" hreflang="en" href="en/">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="./"><img src="icon.svg" alt="">Limes</a>
+    <nav>
+      <a href="#support">サポート</a>
+      <a href="privacy/">プライバシー</a>
+      <a href="en/" lang="en">English</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <span class="status">iOS／Android ・ 公開準備中</span>
+        <h1><span>いま走っている道の</span><span>最高速度を、</span><span><em>確度つき</em>で。</span></h1>
+        <p class="lead">Limes（リメス）は、走行中の道路の最高速度を公開データから推定し、GPS の速度と並べて表示する、日本国内向けのアプリです。規制速度の指定があればその速度を、なければ法定速度を表示します。</p>
+        <ul class="stores">
+          <li><strong>App Store</strong>準備中</li>
+          <li><strong>Google Play</strong>準備中</li>
+        </ul>
+      </div>
+
+      <figure>
+        <div class="phone" role="img" aria-label="走行画面の図。国道36号、推定最高速度60キロ、確度は高、現在の速度は時速58キロ。">
+          <div class="meta">データ 2026年9月版</div>
+          <div class="road">国道36号</div>
+          <div class="sign">60</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><b>確度 高</b><span>規制速度（JARTIC）</span></div>
+          <div class="rule"></div>
+          <div class="label">現在の速度</div>
+          <div class="speed">58<span>km/h</span></div>
+          <div class="gps">GPS 良好</div>
+          <p class="note">表示される速度は公開データからの推定です。実際の最高速度は現地の標識・標示に従ってください。</p>
+        </div>
+        <figcaption>走行画面（図）</figcaption>
+      </figure>
+    </div>
+
+    <section>
+      <p class="kicker">Confidence</p>
+      <h2>数字には、かならず確度を添えます</h2>
+      <p class="intro">最高速度は、交通規制の公開データと地図データから推定しています。どの根拠で出した数字かを「高・中・低」の確度と一緒に示し、判定できないときは数字を出しません。</p>
+      <ul class="levels">
+        <li>
+          <div class="sign">50</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><b>確度 高</b></div>
+          <h3>規制速度</h3>
+          <p>交通規制情報に速度の指定がある道路。指定された速度を表示します。</p>
+        </li>
+        <li>
+          <div class="sign">60</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i class="on"></i><i></i></span><b>確度 中</b></div>
+          <h3>中央線・車線から推定</h3>
+          <p>速度の指定がなく、中央線・車線があると見られる道路。法定速度の 60 を表示します。</p>
+        </li>
+        <li>
+          <div class="sign low">30</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i></i><i></i></span><b>確度 低</b></div>
+          <h3>中央線の証拠なし</h3>
+          <p>証拠が見つからない一般道路は、安全側の 30。輪の色を薄くして示します。</p>
+        </li>
+        <li>
+          <div class="sign none">—</div>
+          <div class="pill"><span class="bars"><i></i><i></i><i></i></span><b>確度 —</b></div>
+          <h3>不明</h3>
+          <p>道路を特定できないとき、データがない道のときは、数字を出しません。</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <p class="kicker">By design</p>
+      <h2>運転のじゃまをしないために</h2>
+      <p class="intro">運転中に見るアプリなので、表示するだけにしています。</p>
+      <ul class="grid">
+        <li>
+          <h3>警告も音も出しません</h3>
+          <p>速度超過の警告、色の変化、音による通知はありません。最高速度と現在の速度を並べて表示するだけです。</p>
+        </li>
+        <li>
+          <h3>走行中に操作する画面がありません</h3>
+          <p>地図はなく、走行画面は表示専用です。縦向き・横向きのどちらでも使えます。</p>
+        </li>
+        <li>
+          <h3>アカウント登録は不要です</h3>
+          <p>名前やメールアドレスの登録はありません。広告や解析のための仕組みも入れていません。</p>
+        </li>
+        <li>
+          <h3>位置情報は端末の中で使います</h3>
+          <p>道路の特定と最高速度の判定は端末の中で行い、位置情報を開発者のサーバーへ送りません。詳しくは<a href="privacy/">プライバシーポリシー</a>をご覧ください。</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <p class="kicker">Data</p>
+      <h2>必要な都道府県だけ、手元に</h2>
+      <p class="intro">道路のデータは都道府県ごとに分かれています。走る地域のぶんだけダウンロードして使います。</p>
+      <ul class="grid">
+        <li>
+          <h3>全国 47 都道府県</h3>
+          <p>県ごと、地方ごとにダウンロードと削除ができます。いまいる都道府県を自動で追加する設定もあります。</p>
+        </li>
+        <li>
+          <h3>更新は自動で</h3>
+          <p>起動時と 1 日 1 回、新しい版があるかを確認して取得します。既定では Wi-Fi 接続時のみ通信します。</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <p class="kicker">Pricing</p>
+      <h2>14 日間、すべての機能を無料で</h2>
+      <p class="intro">無料期間は、最初にデータをダウンロードした日から 14 日間です。そのあとも使い続ける場合は、有料プランに登録します。</p>
+      <div class="plans">
+        <div class="plan first">
+          <h3>無料期間</h3>
+          <div class="price">14<small>日間</small></div>
+          <p>すべての機能を使えます。期間が終わっても、自動で課金されることはありません。</p>
+        </div>
+        <div class="plan">
+          <h3>月額プラン</h3>
+          <div class="price">500<small>円／月</small></div>
+          <p>App Store・Google Play の定期購入です。解約は各ストアの設定から行えます。</p>
+        </div>
+        <div class="plan">
+          <h3>年額プラン</h3>
+          <div class="price">4,800<small>円／年</small></div>
+          <p>12 か月ぶんを月額プランで支払う場合より、1,200 円安くなります。</p>
+        </div>
+      </div>
+      <p class="after">無料期間のあと、登録しない場合も、GPS による現在の速度は引き続き表示します。最高速度の表示とデータのダウンロードが有料プランの機能です。</p>
+    </section>
+
+    <section>
+      <p class="kicker">Please note</p>
+      <h2>ご利用の前に</h2>
+      <div class="caution">
+        <p><strong>表示される最高速度は、公開データからの推定です。</strong>工事や天候による臨時の規制、可変式の標識、データに反映されていない変更などにより、実際と異なることがあります。</p>
+        <p>実際の最高速度は、かならず現地の道路標識・道路標示に従ってください。走行中に画面を操作したり、注視したりしないでください。</p>
+        <p>日本国内専用です。国外の道路のデータはありません。</p>
+      </div>
+    </section>
+
+    <section id="support">
+      <p class="kicker">Support</p>
+      <h2>サポート・お問い合わせ</h2>
+      <ul class="plain">
+        <li><a href="https://github.com/osprey74/limes/issues">GitHub Issues</a><span>不具合の報告、ご質問、ご要望はこちらへお寄せください。</span></li>
+        <li><a href="privacy/">プライバシーポリシー</a><span>アプリが扱う情報と、その使い方について。</span></li>
+        <li><a href="https://github.com/osprey74/limes">ソースコード</a><span>MIT ライセンスで公開しています。</span></li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <h2>データの出典</h2>
+    <ul>
+      <li>出典：「交通規制情報」（公益財団法人日本道路交通情報センター）（<a href="https://www.jartic.or.jp/service/opendata/">https://www.jartic.or.jp/service/opendata/</a>）を加工して作成</li>
+      <li>道路データ：© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors（ODbL）</li>
+      <li>祝日：内閣府「国民の祝日について」に基づき計算</li>
+    </ul>
+    <div>© 2026 osprey74</div>
+  </div>
+</footer>
+
+</body>
+</html>

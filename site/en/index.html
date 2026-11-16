@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limes – the speed limit of the road you are on, with its confidence</title>
+  <meta name="description" content="Limes estimates the speed limit of the road you are driving on from open data and shows it next to your GPS speed. For iOS and Android, in Japan.">
+  <meta name="theme-color" content="#0b0d10">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="alternate" hreflang="ja" href="../">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="./"><img src="../icon.svg" alt="">Limes</a>
+    <nav>
+      <a href="#support">Support</a>
+      <a href="../privacy/#en">Privacy</a>
+      <a href="../" lang="ja">日本語</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <span class="status">iOS / Android · Coming soon</span>
+        <h1>The speed limit of the road you are on, <em>with its confidence</em>.</h1>
+        <p class="lead">Limes estimates the speed limit of the road you are driving on from open data and shows it next to your GPS speed. Where a limit is posted in the regulation data it shows that limit; otherwise it shows the statutory one. For roads in Japan.</p>
+        <ul class="stores">
+          <li><strong>App Store</strong>Coming soon</li>
+          <li><strong>Google Play</strong>Coming soon</li>
+        </ul>
+      </div>
+
+      <figure>
+        <div class="phone" role="img" aria-label="Drawing of the driving screen: National Route 36, estimated limit 60 km/h, confidence high, current speed 58 km/h.">
+          <div class="meta">データ 2026年9月版</div>
+          <div class="road">国道36号</div>
+          <div class="sign">60</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><b>確度 高</b><span>規制速度（JARTIC）</span></div>
+          <div class="rule"></div>
+          <div class="label">現在の速度</div>
+          <div class="speed">58<span>km/h</span></div>
+          <div class="gps">GPS 良好</div>
+          <p class="note">表示される速度は公開データからの推定です。実際の最高速度は現地の標識・標示に従ってください。</p>
+        </div>
+        <figcaption>The driving screen (drawing; the app is in Japanese)</figcaption>
+      </figure>
+    </div>
+
+    <section>
+      <p class="kicker">Confidence</p>
+      <h2>Every number comes with its confidence</h2>
+      <p class="intro">The limit is estimated from open traffic-regulation data and map data. Each number is shown with a confidence of high, medium or low and the grounds it rests on. When the limit cannot be determined, no number is shown.</p>
+      <ul class="levels">
+        <li>
+          <div class="sign">50</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i></span><b>High</b></div>
+          <h3>Posted limit</h3>
+          <p>Roads with a limit in the traffic-regulation data. That limit is shown.</p>
+        </li>
+        <li>
+          <div class="sign">60</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i class="on"></i><i></i></span><b>Medium</b></div>
+          <h3>Inferred from lane markings</h3>
+          <p>Roads with no posted limit that appear to have a centre line or lanes. The statutory 60 is shown.</p>
+        </li>
+        <li>
+          <div class="sign low">30</div>
+          <div class="pill"><span class="bars"><i class="on"></i><i></i><i></i></span><b>Low</b></div>
+          <h3>No evidence of a centre line</h3>
+          <p>Ordinary roads with no such evidence get the cautious 30, with the ring drawn fainter.</p>
+        </li>
+        <li>
+          <div class="sign none">—</div>
+          <div class="pill"><span class="bars"><i></i><i></i><i></i></span><b>—</b></div>
+          <h3>Unknown</h3>
+          <p>When the road cannot be identified, or there is no data for it, no number is shown.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <p class="kicker">By design</p>
+      <h2>Made to stay out of the way</h2>
+      <p class="intro">It is an app you glance at while driving, so all it does is display.</p>
+      <ul class="grid">
+        <li>
+          <h3>No warnings, no sounds</h3>
+          <p>There is no speeding alert, no change of color and no sound. The limit and your speed are shown side by side, and that is all.</p>
+        </li>
+        <li>
+          <h3>Nothing to operate while driving</h3>
+          <p>There is no map, and the driving screen only displays. It works in portrait and in landscape.</p>
+        </li>
+        <li>
+          <h3>No account</h3>
+          <p>No name or e-mail address is asked for. The app contains no advertising or analytics.</p>
+        </li>
+        <li>
+          <h3>Your location is used on the device</h3>
+          <p>Finding the road and its limit happens on the device, and your location is not sent to the developer's server. See the <a href="../privacy/#en">privacy policy</a> for details.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <p class="kicker">Data</p>
+      <h2>Only the prefectures you need</h2>
+      <p class="intro">The road data is split by prefecture. You download the ones you drive in.</p>
+      <ul class="grid">
+        <li>
+          <h3>All 47 prefectures</h3>
+          <p>Download and delete by prefecture or by region. The app can also add the prefecture you are in automatically.</p>
+        </li>
+        <li>
+          <h3>Updated automatically</h3>
+          <p>The app checks for a new version at launch and once a day, and fetches it. By default it does so on Wi-Fi only.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <p class="kicker">Pricing</p>
+      <h2>Every feature free for 14 days</h2>
+      <p class="intro">The free period runs for 14 days from your first data download. To keep using the app after that, subscribe to a paid plan.</p>
+      <div class="plans">
+        <div class="plan first">
+          <h3>Free period</h3>
+          <div class="price">14<small>days</small></div>
+          <p>Every feature is available. You are not charged automatically when it ends.</p>
+        </div>
+        <div class="plan">
+          <h3>Monthly</h3>
+          <div class="price">¥500<small>/ month</small></div>
+          <p>A subscription through the App Store or Google Play. Cancel it in the store's settings.</p>
+        </div>
+        <div class="plan">
+          <h3>Yearly</h3>
+          <div class="price">¥4,800<small>/ year</small></div>
+          <p>¥1,200 less than twelve months on the monthly plan.</p>
+        </div>
+      </div>
+      <p class="after">After the free period, without a subscription, the app keeps showing your GPS speed. The speed limit and the data downloads are what the paid plan covers.</p>
+    </section>
+
+    <section>
+      <p class="kicker">Please note</p>
+      <h2>Before you use it</h2>
+      <div class="caution">
+        <p><strong>The speed limit shown is an estimate from open data.</strong> It can differ from the real one: temporary limits for road works or weather, variable signs, and changes not yet in the data.</p>
+        <p>Always follow the road signs and markings in front of you. Do not operate the screen or keep your eyes on it while driving.</p>
+        <p>For use in Japan only. There is no data for roads elsewhere, and the app itself is in Japanese.</p>
+      </div>
+    </section>
+
+    <section id="support">
+      <p class="kicker">Support</p>
+      <h2>Support and contact</h2>
+      <ul class="plain">
+        <li><a href="https://github.com/osprey74/limes/issues">GitHub Issues</a><span>Bug reports, questions and requests are welcome here.</span></li>
+        <li><a href="../privacy/#en">Privacy policy</a><span>What information the app handles, and how.</span></li>
+        <li><a href="https://github.com/osprey74/limes">Source code</a><span>Published under the MIT license.</span></li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <h2>Data sources</h2>
+    <ul>
+      <li>出典：「交通規制情報」（公益財団法人日本道路交通情報センター）（<a href="https://www.jartic.or.jp/service/opendata/">https://www.jartic.or.jp/service/opendata/</a>）を加工して作成</li>
+      <li>Road data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)</li>
+      <li>Public holidays: calculated from the Cabinet Office's list of national holidays</li>
+    </ul>
+    <div>© 2026 osprey74</div>
+  </div>
+</footer>
+
+</body>
+</html>

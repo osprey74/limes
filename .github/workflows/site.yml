@@ -1,6 +1,9 @@
-# Publishes site/ (the privacy policy) to https://limes.osprey74.com/ whenever
-# it changes on main, and checks that the public pages are the repository's.
+# Publishes site/ (the official site and the privacy policy) to
+# https://limes.osprey74.com/ whenever it changes on main, and checks that the
+# public pages are the repository's.
 #
+# site/index.html          ->  https://limes.osprey74.com/
+# site/en/index.html       ->  https://limes.osprey74.com/en/
 # site/privacy/index.html  ->  https://limes.osprey74.com/privacy/
 #
 # Files are added and replaced, never deleted, and nothing named data is
