@@ -7,6 +7,8 @@
 #   publish     merge the regions' outputs, upload, prune old builds, report failures
 #   mirror      copy manifest.json and the databases to https://limes.osprey74.com/data/,
 #               which the apps read (the bucket itself is the pipeline's store)
+#   certificate every day, also when nothing is built: an issue when the certificate
+#               of limes.osprey74.com has fewer than 21 days left
 #
 # Repository settings:
 #   secrets R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (R2 API token, Object Read & Write)
@@ -328,3 +330,43 @@ jobs:
               echo "::error::$path: expected $size bytes, got ${got:-no answer}"; exit 1
             fi
           done
+
+  # The server renews the certificate by itself from 30 days before it expires,
+  # so fewer than DAYS left means the renewal is not happening. Whether this
+  # workflow still runs every day is watched from outside (server/src/watch.ts).
+  certificate:
+    runs-on: ubuntu-latest
+    env:
+      HOST: limes.osprey74.com
+      DAYS: 21
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check when the certificate expires
+        working-directory: .
+        run: |
+          cert=""
+          for attempt in 1 2 3; do
+            cert="$(echo | openssl s_client -connect "$HOST:443" -servername "$HOST" 2>/dev/null | openssl x509 2>/dev/null || true)"
+            if [ -n "$cert" ]; then break; fi
+            sleep 10
+          done
+          if [ -z "$cert" ]; then
+            echo "::error::could not read the certificate of $HOST"; exit 1
+          fi
+          end="$(echo "$cert" | openssl x509 -noout -enddate | cut -d= -f2)"
+          echo "$HOST: the certificate expires on $end"
+          if echo "$cert" | openssl x509 -noout -checkend "$((DAYS * 86400))" > /dev/null; then
+            exit 0
+          fi
+          # One open issue at a time.
+          title="Certificate of $HOST expires soon"
+          number="$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number')"
+          if [ -n "$number" ]; then
+            echo "::warning::fewer than $DAYS days left; #$number is open"; exit 0
+          fi
+          gh issue create --title "$title" --body "The certificate of https://$HOST/ expires on **$end**, in fewer than $DAYS days.
+
+          The server renews it by itself from 30 days before that date, so the renewal is not happening. Check the SSL settings of $HOST in the onamae.com rental server control panel. Once the certificate has expired, the apps can no longer fetch the data.
+
+          Nothing more is posted while this issue is open. Close it once the certificate is renewed."
