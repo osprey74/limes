@@ -45,7 +45,9 @@ It needs the secret `GITHUB_TOKEN`: a fine-grained personal access token for thi
 npx wrangler secret put GITHUB_TOKEN   # asks for the value
 ```
 
-If the token is missing, has expired, or GitHub does not answer, the run fails and shows in the Worker's logs (Cloudflare dashboard → Workers & Pages → limes-trial → Logs); no issue is opened. Note the token's expiry date and replace it before then.
+If the token is missing, has expired, or GitHub does not answer, the run fails and shows in the Worker's logs (Cloudflare dashboard → Workers & Pages → limes-trial → Logs); no issue is opened. If the token has an expiry date, replace it before then.
+
+To run the watch once by hand: `npx wrangler dev --remote --test-scheduled`, then `curl "http://localhost:8787/__scheduled"`; the result (`ok`, or what it found) is printed by `wrangler dev`.
 
 ## Counts
 
