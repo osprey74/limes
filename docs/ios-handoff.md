@@ -55,7 +55,7 @@ cargo run --release -p limes-ffi --bin uniffi-bindgen -- generate \
 
 ## 3. データの取得と更新
 
-- 配信元：`https://limes.osprey74.com/data/`（2026-11-15決定。`docs/data-hosting.md`）。Android 版は 2026-11-16 に切り替えた。iOS 版は開発中の `https://pub-f67fb68aa5714cc7b4694371d04c0bf4.r2.dev/` のままで、正式リリースまでに移す。URL は設定値で持ち、差し替えられるようにする
+- 配信元：`https://limes.osprey74.com/data/`（2026-11-15決定。`docs/data-hosting.md`）。Android 版・iOS 版とも 2026-11-16 に切り替えた。URL は設定値で持ち、差し替えられるようにする
 - `manifest.json` を ETag 付きで取る。前回の本文と ETag を保存し、`If-None-Match` で 304 なら保存済みを使う（`…/data/DataServer.kt`）。オフライン時の容量表示にも保存済みを使う
 - manifest の形式：`prefectures.<slug> = {version, schema_version, jartic_month, osm_date, path, size, sha256, raw_size}`。`path` は manifest からの相対パス
 - 更新の流れ（`…/data/UpdateWorker.kt`）：選んだ県が空なら何もしない → manifest 取得（通信失敗は後で再試行）→ `planUpdates` → 各 `downloads` をキャッシュに落として `installUpdate` → 一時ファイルを消す。`DownloadMismatch` はその県だけ飛ばして次回に回す
