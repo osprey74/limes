@@ -2,6 +2,8 @@
 
 [日本語](README.ja.md)
 
+Official site: <https://limes.osprey74.com/en/> ([日本語](https://limes.osprey74.com/))
+
 Limes is a driving companion app for Japan (iOS / Android) that estimates the maximum speed of the road you are driving on — the posted limit where one exists, otherwise the statutory limit (60 or 30 km/h after the 2026-09-01 amendment) — from public data, and shows it next to your GPS speed.
 
 Estimates always come with a confidence level. Actual road signs and markings take precedence.
