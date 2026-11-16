@@ -29,6 +29,24 @@ npx wrangler d1 execute limes-trial --remote --file schema.sql
 npx wrangler deploy                         # prints https://limes-trial.<account>.workers.dev
 ```
 
+## Watch on the data release
+
+The same Worker looks at the data release once a day (cron in `wrangler.toml`, 12:00 JST; `src/watch.ts`), because GitHub turns the scheduled runs of a public repository off after 60 days without repository activity and nothing inside GitHub then says so. It opens the issue "Data release: not running or not reachable" when
+
+- the `data-release` workflow is not active,
+- its last scheduled run is more than 3 days old, or
+- `https://limes.osprey74.com/data/manifest.json` cannot be fetched (server down, certificate expired).
+
+While that issue is open, nothing more is posted. To resume a workflow that was turned off: Actions → data-release → Enable workflow, or `gh workflow enable data-release.yml`.
+
+It needs the secret `GITHUB_TOKEN`: a fine-grained personal access token for this repository only, with Issues (read and write) and Actions (read).
+
+```sh
+npx wrangler secret put GITHUB_TOKEN   # asks for the value
+```
+
+If the token is missing, has expired, or GitHub does not answer, the run fails and shows in the Worker's logs (Cloudflare dashboard → Workers & Pages → limes-trial → Logs); no issue is opened. Note the token's expiry date and replace it before then.
+
 ## Counts
 
 Read them in the Cloudflare dashboard (Storage & Databases → D1 → limes-trial → Console):

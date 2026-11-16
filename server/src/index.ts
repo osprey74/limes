@@ -8,8 +8,12 @@
 //   200             {"first_seen": "<ISO 8601>", "trial_ends": "<ISO 8601>"}
 //
 // Counts are read in the Cloudflare dashboard (D1 console), not served here.
+//
+// The same Worker also watches the data release once a day (watch.ts).
 
-export interface Env {
+import { type WatchEnv, watch } from "./watch.ts";
+
+export interface Env extends Partial<WatchEnv> {
   DB: D1Database;
   TRIAL_DAYS: string;
 }
@@ -30,6 +34,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     return handle(request, env, new Date());
+  },
+  // The cron trigger in wrangler.toml. A failure shows in the Worker's logs.
+  async scheduled(_event: unknown, env: Env): Promise<void> {
+    console.log(await watch(env as WatchEnv, new Date(), (url, init) => fetch(url, init)));
   },
 };
 

@@ -9,7 +9,7 @@ Limes（リメス）：走行中の道路の最高速度（規制速度または
 | `core/` | Rustワークスペース。`limes-core`（判定・マップマッチ・DB読込・更新管理）、`limes-ffi`（UniFFI）、`limes-cli`（パイプライン用判定） | Phase 1（判定・条件評価・DB・マップマッチ・UniFFI・更新管理まで） |
 | `ios/` | Swift / SwiftUI、StoreKit 2 | 走行・設定・ダウンロード・有料プラン画面、データ更新（起動時・前面に戻ったとき・バックグラウンドの処理タスク）、無料期間と期間終了時の制限、課金（StoreKit 2：`com.osprey74.limes.premium.monthly`・`.yearly`。Xcode の StoreKit テスト用に `ios/Limes.storekit`）、アイコン・起動画面まで。Android版の動作は `docs/ios-handoff.md` にまとめてある。Android版で直す項目は `docs/android-handoff.md` |
 | `android/` | Kotlin / Jetpack Compose、Play Billing | 走行・設定・ダウンロード画面、データ更新、アイコン・起動画面、無料期間と Play Billing（定期購入 `premium`：`monthly`・`yearly`）まで |
-| `server/` | Cloudflare Workers＋D1。無料期間の開始日の記録（`POST /v1/trial`） | limes-trial.osprey74.workers.dev にデプロイ済み |
+| `server/` | Cloudflare Workers＋D1。無料期間の開始日の記録（`POST /v1/trial`）と、データ更新の定期実行の見張り（1日1回、止まっていたら Issue を立てる） | limes-trial.osprey74.workers.dev にデプロイ済み（見張りはデプロイ前） |
 | `data-pipeline/` | Python（uv）。JARTIC取得・集計、のちにOSM・国土地理院データ結合 | Phase 0 |
 | `docs/phase0/` | データ検証レポートと所見 | — |
 

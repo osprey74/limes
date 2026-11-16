@@ -4,6 +4,13 @@ compatibility_date = "2026-10-01"
 
 [vars]
 TRIAL_DAYS = "14"
+# The daily watch on the data release (src/watch.ts). Its token is the secret GITHUB_TOKEN.
+WATCH_REPO = "osprey74/limes"
+WATCH_WORKFLOW = "data-release.yml"
+WATCH_MANIFEST_URL = "https://limes.osprey74.com/data/manifest.json"
+
+[triggers]
+crons = ["0 3 * * *"] # 12:00 JST, hours after the data release's 06:30 JST
 
 [[d1_databases]]
 binding = "DB"
