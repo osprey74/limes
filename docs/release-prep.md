@@ -11,7 +11,7 @@
 | 位置情報（道路の特定と速度の表示） | 出ない。端末内で処理する。使用中のみ取得し、履歴は保存しない | `ios/Limes/Drive/DriveModel.swift`（`requestWhenInUseAuthorization`）、`android/app/src/main/AndroidManifest.xml`（バックグラウンドの位置情報の権限なし） |
 | 位置情報（いまいる都道府県を調べる） | 出る。自動追加が有効（既定）のとき、3 km 移動するごとか10分ごとに、OS の逆ジオコーディング（iOS は `CLGeocoder` で Apple、Android は `Geocoder` で Google）へ現在地を送る。開発者のサーバーには届かない | `ios/Limes/Drive/DriveModel.swift`・`android/…/drive/DriveModel.kt` の `maybeAddCurrentPrefecture` |
 | 端末を区別する値（ID の SHA-256） | 出る。最初のデータダウンロードのときに一度、OS の種類とともに `server/` へ送り、最初に届いた日時と合わせて保存する | `ios/Limes/Access/TrialClient.swift`、`android/…/access/TrialClient.kt`、`server/schema.sql` |
-| 取得する都道府県 | 出る。データ配信（お名前.com のレンタルサーバー `limes.osprey74.com`）への要求として。自動追加が有効なら、いまいる県も要求する。iOS 版は配信 URL を切り替えるまで Cloudflare R2 へ要求する | `android/…/data/DataServer.kt`、`ios/Limes/Data/DataServer.swift`、`DriveModel.swift` |
+| 取得する都道府県 | 出る。データ配信（お名前.com のレンタルサーバー `limes.osprey74.com`）への要求として。自動追加が有効なら、いまいる県も要求する（iOS 版も 2026-11-16 にこの配信 URL へ切り替え済み） | `android/…/data/DataServer.kt`、`ios/Limes/Data/DataServer.swift`、`DriveModel.swift` |
 | 購入の情報 | 開発者には届かない。登録の有無を端末上でストアに確認するだけ | `ios/Limes/Access/Billing.swift` |
 | 広告・解析・トラッキング | なし。該当する SDK を入れていない | `android/app/build.gradle.kts` の依存、iOS は外部ライブラリなし |
 
@@ -19,7 +19,8 @@
 
 - 本文：`site/privacy/index.html`（日本語と英語を1ページに）
 - 公開先：`https://limes.osprey74.com/privacy/`（2026-11-16 公開。`site/` を変えたコミットが `main` に入ると `.github/workflows/site.yml` が置き直す。`docs/data-hosting.md`）。App Store Connect と Google Play Console への URL の登録はこれから
-- データの取得先は、お名前.com のレンタルサーバー（運営：GMOインターネット株式会社）として書いてある（2026-11-16、Android 版の配信 URL の切り替えに合わせて、上の表・下の 3・ポリシー本文を書き換えた）。申告の内容は変えていない（2026-11-15決定。`docs/data-hosting.md` の 6）。iOS 版の配信 URL はまだ切り替えていないので、ポリシーを公開する前に切り替える
+- データの取得先は、お名前.com のレンタルサーバー（運営：GMOインターネット株式会社）として書いてある（2026-11-16、Android 版の配信 URL の切り替えに合わせて、上の表・下の 3・ポリシー本文を書き換えた）。申告の内容は変えていない（2026-11-15決定。`docs/data-hosting.md` の 6）。iOS 版の配信 URL も 2026-11-16 に切り替えた
+- アプリ内のリンク（iOS 版）：有料プラン画面と設定画面の「情報」に、プライバシーポリシーと利用規約（Apple の標準 EULA）へのリンクがある（2026-11-17。`ios/Limes/Config.swift`）。App Store に入れる文面と登録の手順は `app-store-listing.md`
 - 問い合わせ先：GitHub Issues（<https://github.com/osprey74/limes/issues>）
 - アプリの挙動を変えたら（送信する情報、外部サービス、位置情報の使い方）、ポリシー・下の申告・`ios/Limes/PrivacyInfo.xcprivacy` の3つをそろえて直す
 
@@ -78,7 +79,7 @@ Free trial and subscription
 - The free trial is the app's own: 14 days from the first data download, with every feature. It is not an App Store introductory offer.
 - To stop a reinstall from restarting the trial, the app sends a SHA-256 hash of an app-generated ID to our server once, at the first download. Nothing else is sent to our server.
 - After the trial, without a subscription, the app keeps showing the GPS speed; the speed limit and the data downloads need the subscription (com.osprey74.limes.premium.monthly / .yearly, one subscription group).
-- The plans screen (Settings > Paid plan) has the prices from the store, Restore Purchases and Manage Subscription. There is no other way to unlock the paid features.
+- The plans screen (Settings > Paid plan) has the prices from the store, Restore Purchases, Manage Subscription, and the links to the Terms of Use (Apple's standard EULA) and the Privacy Policy. There is no other way to unlock the paid features.
 ```
 
 日本語の要点（上の英文と同じ内容）：
@@ -93,5 +94,5 @@ Free trial and subscription
 ### 決めること・用意するもの
 
 - 走行中の画面の録画は添えない（2026-11-15決定）。位置情報を使う既存アプリ（Michi-Navi、Rindo）は録画なしで審査を通っており、審査側でも位置情報のシミュレーションはできる。審査で求められたら、そのとき用意する
-- 審査メモの「33 MB」などの数値は、提出時点のデータで確かめ直す
+- 審査メモの「33 MB」などの数値は、提出時点のデータで確かめ直す（2026-11-17 時点：徳島県は展開後 33 MB で変わらず）
 - Sandbox で購入を試すためのテスト用アカウントは App Review 側が持っているので、こちらで用意するものはない（Sandbox の商品が App Store Connect で「提出準備完了」になっていること）

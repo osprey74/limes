@@ -42,6 +42,12 @@ swift scripts/render-icon.swift
 
 The system's launch screen (`Info.plist`, `UILaunchScreen`) is the gauge on the ground color, with no text. The app's own screen (`Limes/UI/LaunchScreen.swift`) follows at every launch for about 1.5 seconds, with the name and a word on safe driving around the gauge at the same place; a tap skips it.
 
+## iPhone Duo
+
+Open and on its side, the inner display keeps a band at one side for the clock and the battery, outside the safe area. `Limes/UI/SideBand.swift` lays every screen out across that band, so that it is centered on the display; the gear button of the driving screen stays beside the clock. On a narrow screen (the outer display) the safe area is kept, because the rows would run under the clock. The launch screen moves its words down on a short screen (under 760 pt and not a phone on its side), where they would otherwise touch the name.
+
+Checked in the simulator on the inner display on its side (launch, driving, settings, download). Not checked: the outer display, the inner display upright, and the half-open pose.
+
 ## Updates in the background
 
 `Limes/Data/BackgroundUpdate.swift` asks iOS for a processing task (`com.osprey74.limes.update`, also in `Info.plist`) a day after the last check, each time the app leaves the front. iOS decides when and whether it runs, typically while the phone is idle. The task runs the same update as the app in front (the Wi-Fi only setting applies) and stops when iOS says its time is up; what was installed by then stays. It is not asked for when auto update is off, no prefecture is kept, or the trial is over.
@@ -55,6 +61,8 @@ e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWith
 ## Subscription
 
 The products are `com.osprey74.limes.premium.monthly` and `com.osprey74.limes.premium.yearly`, in one subscription group, with no introductory offer (the free trial is the app's own). Prices come from the store; none is written in the app.
+
+The plans screen and the settings screen (情報) link to the privacy policy and to the terms of use, which are Apple's standard licence agreement (`Config.swift`); an app with subscriptions has to carry both links. What goes into App Store Connect is in `../docs/app-store-listing.md`.
 
 `Limes.storekit` is a StoreKit configuration for local testing, and the shared `Limes` scheme uses it, so a run from Xcode shows the two plans and lets you buy, renew, expire and refund them without App Store Connect (Debug > StoreKit > Manage Transactions). Its prices are ¥500 a month and ¥4,800 a year. The note under the yearly plan ("月あたり ¥400（月額の12か月分より20%お得）") is worked out from the displayed prices, because Xcode's test store (27.2) gives `Product.price` as 4 for ¥4,800. It applies only to runs started from Xcode: an app launched any other way asks the App Store, and until the products exist in App Store Connect the plans screen says it can't show them.
 
