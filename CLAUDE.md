@@ -77,6 +77,7 @@ open Limes.xcodeproj
 
 ## 規約
 
+- これから対応することは `docs/tasks.md` に書く。作業を始める前に読む
 - リポジトリ直下の `Limes — 法定速度推定アプリ Claude Code向けハンドオフ.md` は非公開の計画書（収益モデル・費用試算を含む）。gitignore 済みで、コミットしない。参照はしてよいが、その内容を公開ファイルへ転記しない
 - ドキュメントは英日2言語（`README.md` / `README.ja.md`）。片方を更新したらもう片方も更新する
 - コミットメッセージは英語、Conventional Commits 形式
