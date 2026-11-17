@@ -56,6 +56,14 @@ struct SubscribeScreen: View {
             Text("有料プランは App Store のサブスクリプションです。期間の終わりに自動で更新され、同じ料金が請求されます。"
                 + "解約は「サブスクリプションを管理」からいつでもでき、解約しても期間の終わりまでは使えます。")
                 .font(.system(size: 12)).lineSpacing(6).foregroundStyle(Palette.muted)
+            // Both links have to be on the screen that sells the subscription
+            // (App Store Review Guideline 3.1.2, Schedule 2 of the licence agreement).
+            HStack(spacing: 24) {
+                Link("利用規約", destination: Config.termsURL)
+                Link("プライバシーポリシー", destination: Config.privacyURL)
+            }
+            .font(.system(size: 13, weight: .medium)).tint(Palette.accent)
+            .frame(maxWidth: .infinity, minHeight: 44)
             VStack(spacing: 12) {
                 if access.state != .subscribed {
                     FlatButton(text: "購入を復元", wide: true, enabled: !billing.busy) {

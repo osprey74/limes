@@ -6,6 +6,8 @@
 	<array>
 		<string>com.osprey74.limes.update</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>processing</string>

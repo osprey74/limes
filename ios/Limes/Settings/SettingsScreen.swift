@@ -65,6 +65,8 @@ struct SettingsScreen: View {
                 }
                 ExpandableText(title: "データの出典とライセンス", text: attribution)
                 ExpandableText(title: "免責事項", text: disclaimer)
+                LinkRow(title: "プライバシーポリシー", url: Config.privacyURL)
+                LinkRow(title: "利用規約", url: Config.termsURL)
             }
 
             Text(disclaimer)
@@ -311,6 +313,22 @@ private struct RegionRow: View {
             FlatButton(text: "\(region.name)のデータをすべて削除", textColor: Palette.dangerText, wide: true) { confirm = key }
                 .padding(.top, 8)
         }
+    }
+}
+
+/// A row that opens a page in the browser.
+private struct LinkRow: View {
+    let title: String
+    let url: URL
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        CardRow(minHeight: 52, action: { openURL(url) }) {
+            Text(title).font(.system(size: 15)).foregroundStyle(Palette.text)
+            Spacer()
+            Image(systemName: "arrow.up.right").font(.system(size: 13)).foregroundStyle(Palette.muted)
+        }
+        .accessibilityAddTraits(.isLink)
     }
 }
 
