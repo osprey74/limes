@@ -13,7 +13,7 @@ struct DownloadScreen: View {
         let held = Set(data.installed.map(\.prefecture))
         let chosen = selected.compactMap { data.published[$0] }
         Page(spacing: 20) {
-            VStack(alignment: .leading, spacing: 12) {
+            PageHeader(spacing: 20) {
                 BackButton(label: "設定", action: onBack)
                 Text("データのダウンロード").font(.system(size: 26, weight: .bold)).foregroundStyle(Palette.text)
                 Text("走行する地域のデータを端末に保存します。保存したデータで判定するので、走行中は通信しません。")

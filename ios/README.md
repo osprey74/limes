@@ -44,9 +44,15 @@ The system's launch screen (`Info.plist`, `UILaunchScreen`) is the gauge on the 
 
 ## iPhone Duo
 
-Open and on its side, the inner display keeps a band at one side for the clock and the battery, outside the safe area. `Limes/UI/SideBand.swift` lays every screen out across that band, so that it is centered on the display; the gear button of the driving screen stays beside the clock. On a narrow screen (the outer display) the safe area is kept, because the rows would run under the clock. The launch screen moves its words down on a short screen (under 760 pt and not a phone on its side), where they would otherwise touch the name.
+iPhone Duo keeps a band at one side of the screen for the camera, the clock and the battery, outside the safe area: on the outer display, and on the inner display on its side. `Limes/UI/SideBand.swift` lays every screen out across that band, so that it is centered on the display, and what is at the top of a screen makes room for the clock:
 
-Checked in the simulator on the inner display on its side (launch, driving, settings, download). Not checked: the outer display, the inner display upright, and the half-open pose.
+- Inner display on its side (wide): the pages are 640 pt at most and stay clear of the band on their own. The gear button of the driving screen stays beside the clock.
+- Outer display, upright (narrow): the rows of a page are as wide as the screen, so the top of the page (`PageHeader`: back button, title) keeps out of the band and is tall enough for the first row to start below the clock. On the driving screen the sign and the road name keep the same room on both sides.
+- Outer display on its side: the safe area is kept. The camera and the clock are elsewhere on the band there, and it has not been laid out.
+
+The launch screen moves its words down on a short screen (under 760 pt and not a phone on its side), where they would otherwise touch the name.
+
+Checked in the simulator (launch, driving, settings, download; the plans screen on the inner display only, the outer one without the prices). Not checked: the outer display on its side, the inner display upright, and the half-open pose.
 
 ## Updates in the background
 

@@ -17,7 +17,7 @@ struct SettingsScreen: View {
     var body: some View {
         @Bindable var settings = data.settings
         Page {
-            VStack(alignment: .leading, spacing: 12) {
+            PageHeader {
                 BackButton(label: "走行画面", action: onBack)
                 Text("設定").font(.system(size: 30, weight: .bold)).foregroundStyle(Palette.text)
             }

@@ -7,6 +7,15 @@ import SwiftUI
 struct SideBand: Equatable {
     let edge: HorizontalEdge
     let width: CGFloat
+
+    /// A narrow screen (the outer display, upright): the rows of a page reach
+    /// the band, so what is at the top has to make room for the clock.
+    let narrow: Bool
+
+    /// How far down the band the camera and the clock reach, with a margin
+    /// (measured on the outer display of iPhone Duo: the battery ring ends at
+    /// 151 pt, at 162 pt while the location arrow is shown above the clock).
+    static let clockHeight: CGFloat = 172
 }
 
 extension EnvironmentValues {
@@ -18,9 +27,11 @@ extension EnvironmentValues {
 /// display. What would reach the top of the band, where the clock is, has to
 /// keep clear of it (`sideBand` in the environment gives its width).
 ///
-/// Only on a wide screen: there the pages (640 pt at most) and the driving
-/// screen stay clear of the band on their own. On a narrow one (the outer
-/// display) the rows would run under the clock, so the safe area is kept.
+/// On a wide screen the pages (640 pt at most) and the driving screen stay
+/// clear of the band on their own. On a narrow one (the outer display) the
+/// top of each screen makes room for the clock (`PageHeader`, the driving
+/// screen). A narrow screen on its side keeps the safe area: the camera and
+/// the clock are elsewhere on the band there, and it has not been laid out.
 struct AcrossSideBand<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -38,15 +49,18 @@ struct AcrossSideBand<Content: View>: View {
     /// (the camera housing and its mirror image), which is not a band.
     private static func band(_ geo: GeometryProxy) -> SideBand? {
         let insets = geo.safeAreaInsets
-        let band: SideBand? =
+        let edge: HorizontalEdge? =
             if insets.trailing >= 64, insets.trailing - insets.leading >= 40 {
-                SideBand(edge: .trailing, width: insets.trailing)
+                .trailing
             } else if insets.leading >= 64, insets.leading - insets.trailing >= 40 {
-                SideBand(edge: .leading, width: insets.leading)
+                .leading
             } else {
                 nil
             }
-        guard let band, geo.size.width + band.width >= 800 else { return nil }
-        return band
+        guard let edge else { return nil }
+        let width = edge == .trailing ? insets.trailing : insets.leading
+        let narrow = geo.size.width + width < 800
+        if narrow, geo.size.width + width > geo.size.height { return nil }
+        return SideBand(edge: edge, width: width, narrow: narrow)
     }
 }

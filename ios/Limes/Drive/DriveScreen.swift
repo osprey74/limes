@@ -67,7 +67,11 @@ struct DriveScreen: View {
                     }
                     .padding(.horizontal, 32)
                 } else {
+                    // On a narrow screen drawn across the side band, the road name
+                    // is level with the clock: the same room on both sides keeps it
+                    // clear and in the middle.
                     limit(locked: locked, state: state, stale: stale, sign: 220, note: note)
+                        .padding(.horizontal, sideBand?.narrow == true ? sideBand!.width : 0)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     Palette.line.frame(height: 1).padding(.horizontal, 16)
                     SpeedPanel(state: state, stale: stale, figure: 140)

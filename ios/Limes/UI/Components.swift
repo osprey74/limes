@@ -167,6 +167,24 @@ struct Chevron: View {
     }
 }
 
+/// The top of a page: the back button, the title and any words under them.
+/// On a narrow screen drawn across the side band it keeps out of the band and
+/// is tall enough for what follows, which is as wide as the screen, to start
+/// below the clock (the page starts 16 pt from the top).
+struct PageHeader<Content: View>: View {
+    /// The spacing of the page it is on.
+    var spacing: CGFloat = 24
+    @ViewBuilder var content: Content
+    @Environment(\.sideBand) private var sideBand
+
+    var body: some View {
+        let band = sideBand.flatMap { $0.narrow ? $0 : nil }
+        VStack(alignment: .leading, spacing: 12) { content }
+            .padding(band?.edge == .leading ? .leading : .trailing, band?.width ?? 0)
+            .frame(minHeight: band == nil ? nil : SideBand.clockHeight - 16 - spacing, alignment: .top)
+    }
+}
+
 /// A scrolling settings-style page on the ground color.
 struct Page<Content: View>: View {
     var spacing: CGFloat = 24

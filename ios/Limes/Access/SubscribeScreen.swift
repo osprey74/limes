@@ -15,7 +15,7 @@ struct SubscribeScreen: View {
         let removed = data.settings.dataRemovedNotice
         let billing = access.billing
         Page(spacing: 20) {
-            VStack(alignment: .leading, spacing: 12) {
+            PageHeader(spacing: 20) {
                 BackButton(label: backLabel, action: onBack)
                 Text("有料プラン").font(.system(size: 30, weight: .bold)).foregroundStyle(Palette.text)
             }
