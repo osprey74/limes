@@ -15,6 +15,16 @@ struct LaunchScreen: View {
     var body: some View {
         // A phone on its side: little room under the gauge.
         let low = height == .compact
+        GeometryReader { geo in
+            // A short screen that is not a phone on its side (a folding phone, open
+            // and on its side, or closed; the smallest phones): the words keep their
+            // two lines and move down, away from the name.
+            let short = !low && geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom < 760
+            screen(low: low, short: short)
+        }
+    }
+
+    private func screen(low: Bool, short: Bool) -> some View {
         ZStack {
             Palette.ground.ignoresSafeArea()
 
@@ -31,7 +41,7 @@ struct LaunchScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
 
-            VStack(spacing: low ? 12 : 28) {
+            VStack(spacing: low ? 12 : short ? 16 : 28) {
                 Text(low ? "道路状況や実際の交通規制にあわせ、安全運転を心がけましょう" : "道路状況や実際の交通規制にあわせ、\n安全運転を心がけましょう")
                     .font(.system(size: 17, weight: .medium)).lineSpacing(9).multilineTextAlignment(.center)
                     .foregroundStyle(Palette.text)
@@ -42,8 +52,10 @@ struct LaunchScreen: View {
                         Capsule().fill(Palette.muted).frame(width: 120 * progress)
                     }
             }
-            .padding(.bottom, low ? 8 : 56)
-            .frame(maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, low ? 8 : short ? 20 : 56)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            // Under the gauge, which is at the middle of the screen, not of the safe area.
+            .ignoresSafeArea(.container, edges: .horizontal)
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: onDone)

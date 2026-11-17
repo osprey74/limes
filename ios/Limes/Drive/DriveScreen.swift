@@ -17,6 +17,7 @@ struct DriveScreen: View {
     var onSubscribe: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.sideBand) private var sideBand
 
     var body: some View {
         // Ticks every second so stale fixes (a tunnel) are noticed.
@@ -110,7 +111,9 @@ struct DriveScreen: View {
             }
             .accessibilityLabel("設定を開く")
         }
-        .padding(.horizontal, 16)
+        // The clock is at the top of the side band: the button stays beside it,
+        // and the same room is left on the other side so the label stays centered.
+        .padding(.horizontal, 16 + (sideBand?.width ?? 0))
         .padding(.vertical, 8)
     }
 }

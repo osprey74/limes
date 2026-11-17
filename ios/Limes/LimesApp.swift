@@ -62,7 +62,7 @@ private struct RootView: View {
     }
 
     var body: some View {
-        Group {
+        AcrossSideBand {
             switch screen {
             case .launch:
                 // With the trial over, the plans show once at launch, never while driving.
