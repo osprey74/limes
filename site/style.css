@@ -61,6 +61,9 @@ h1 span { display: inline-block; } /* Japanese phrases that must not break insid
 .stores { margin: 30px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
 .stores li { font-size: 14px; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; padding: 10px 16px; }
 .stores strong { color: var(--text); font-weight: 600; margin-right: 6px; }
+.stores li.live { padding: 0; border-style: solid; border-color: var(--accent); }
+.stores li.live a { display: block; padding: 10px 16px; color: var(--accent); text-decoration: none; border-radius: 12px; }
+.stores li.live a:hover { background: var(--card); }
 
 /* ---------- screenshots (iPhone, 804 x 1748) ---------- */
 .shot { display: block; width: min(100%, 300px); height: auto; margin: 0 auto; border: 1px solid var(--border); border-radius: 40px; box-shadow: 0 0 0 7px #05070a, 0 0 0 8px var(--line), 0 40px 90px rgba(0, 0, 0, 0.6); }

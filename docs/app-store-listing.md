@@ -170,4 +170,5 @@ Unlocks the estimated speed limit display and the road data downloads after the 
 - 審査への追加：グループだけでは提出できず、サブスクリプション2つをそれぞれ「審査用に追加」する。その前に、各商品の「審査に関する情報」にスクリーンショット（`screenshots/ios/05-subscribe.png`）が要る
 - `screenshots/ios/` の5枚には透過チャンネルが残っていたので外した（2 の「透過なし」はこの時点から）
 - TestFlight で、データのダウンロード・購入・利用規約とプライバシーポリシーのリンクを確かめた
+- 審査を通り、Android 版を待たずに公開した（2026-11-19 に確認。<https://apps.apple.com/jp/app/limes/id6836138519>）。公式サイトの App Store の表記をストアへのリンクに直した
 

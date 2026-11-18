@@ -16,12 +16,6 @@
 - 表示が変わった画面は `screenshots/ios/duo/` を撮り直す（有料プランは Xcode から実行して価格を出す）
 - `ios/README.md` の「iPhone Duo」を合わせて直す
 
-## iOS：公開後の作業
-
-バージョン 1.0.0 を App Store で公開した（2026-11-19 に確認。<https://apps.apple.com/jp/app/limes/id6836138519>）。Android 版は待たなかった（2026-11-18決定）。登録の記録は `docs/app-store-listing.md` の 6。
-
-- `site/index.html` と `site/en/index.html` の App Store の表記（「公開準備中」「準備中」）をストアへのリンクに直す
-
 ## ストアでの名前を「Limes - 最高速度メーター」に改める（2026-11-19決定）
 
 「Limes」という名前のアプリがストアに多く、検索で見つけにくいため。値は `docs/app-store-listing.md` と `docs/play-store-listing.md` の 1。ホーム画面の表示名は両方とも「Limes」のまま。
