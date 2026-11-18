@@ -15,3 +15,11 @@
 - 内側（横・縦）、通常の iPhone で各画面を撮って確かめる。開閉はコマンドからはできないので、シミュレーター（Device Hub）での操作が要る。回転はデバッグビルドの起動引数 `-debug_orientation left`（`right`・`portrait`）でできる
 - 表示が変わった画面は `screenshots/ios/duo/` を撮り直す（有料プランは Xcode から実行して価格を出す）
 - `ios/README.md` の「iPhone Duo」を合わせて直す
+
+## iOS：App Store の審査（2026-11-18 提出）
+
+バージョン 1.0.0（ビルド 1）とサブスクリプション2つを審査へ出した。登録の記録は `docs/app-store-listing.md` の 6。
+
+- 審査の結果を待つ。差し戻されたら、指摘の文面に沿って直す
+- 通ったあとは「手動でリリース」のままにし、Android 版と公開日をそろえる
+
