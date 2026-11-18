@@ -47,12 +47,13 @@ The system's launch screen (`Info.plist`, `UILaunchScreen`) is the gauge on the 
 iPhone Duo keeps a band at one side of the screen for the camera, the clock and the battery, outside the safe area: on the outer display, and on the inner display on its side. `Limes/UI/SideBand.swift` lays every screen out across that band, so that it is centered on the display, and what is at the top of a screen makes room for the clock:
 
 - Inner display on its side (wide): the pages are 640 pt at most and stay clear of the band on their own. The gear button of the driving screen stays beside the clock.
-- Outer display, upright (narrow): the rows of a page are as wide as the screen, so the top of the page (`PageHeader`: back button, title) keeps out of the band and is tall enough for the first row to start below the clock. On the driving screen the sign and the road name keep the same room on both sides.
-- Outer display on its side: the safe area is kept. The camera and the clock are elsewhere on the band there, and it has not been laid out.
+- Inner display, upright: the band of the clock is at the top, inside the safe area. On the driving screen the line between the sign and the speed goes across the middle of the display, not of the safe area (a portrait screen 600 pt wide or more).
+- Outer display, upright (narrow): the rows of a page are as wide as the screen, so the top of the page (`PageHeader`: back button, title) keeps out of the band and is tall enough for the first row to start below the clock. On the driving screen the sign and the road name keep the same room on both sides, and there is no line between the sign and the speed (it would run under the clock).
+- Outer display on its side: no clock is shown, and only the camera takes a corner of the band (about 71 pt): the lower corner when the band is at the right, the upper one when it is at the left. The driving screen is drawn across the band, with its last line kept clear of the lower corner. On a page, the top keeps out of the band when the camera is in the upper corner, and the page ends with enough room to scroll its last rows clear of the lower one.
 
 The launch screen moves its words down on a short screen (under 760 pt and not a phone on its side), where they would otherwise touch the name.
 
-Checked in the simulator (launch, driving, settings, download; the plans screen on the inner display only, the outer one without the prices). Not checked: the outer display on its side, the inner display upright, and the half-open pose.
+Checked in the simulator (launch, driving, settings, download; the plans screen on the inner display only, the outer one without the prices). The outer display on its side was checked with `-debug_orientation left` and `right` (driving, settings, download): a launch argument of debug builds that turns the screen, `portrait` to turn it back, because the simulator cannot be turned from the command line. Screenshots do not show the camera, and Device Hub draws the phone the same way for both sides, so the corner the camera is in was seen for the band at the right only; for the band at the left it follows from the way the phone is turned. The inner display upright was checked on the driving screen only. Not checked: the half-open pose.
 
 ## Updates in the background
 

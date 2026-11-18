@@ -1,21 +1,42 @@
 import SwiftUI
 
-/// The band a folding phone keeps at one side of the screen for the clock and
-/// the battery (iPhone Duo: the inner display on its side). It is outside the
-/// safe area, so a screen laid out in the safe area sits off the middle of the
-/// display. Only the top of the band is taken; the rest is free.
+/// The band a folding phone keeps at one side of the screen, outside the safe
+/// area, so a screen laid out in the safe area sits off the middle of the
+/// display (iPhone Duo: the outer display, and the inner display on its side).
+/// Only one end of the band is taken; the rest is free:
+///
+/// - upright, and on the inner display: the camera, the clock and the battery,
+///   at the top;
+/// - the outer display on its side: the camera alone, in a corner. No clock is
+///   shown there. The corner is the lower one when the band is at the right,
+///   the upper one when it is at the left.
 struct SideBand: Equatable {
     let edge: HorizontalEdge
     let width: CGFloat
 
-    /// A narrow screen (the outer display, upright): the rows of a page reach
-    /// the band, so what is at the top has to make room for the clock.
+    /// A narrow screen (the outer display): the rows of a page reach the band,
+    /// so what is at the taken end of it has to make room.
     let narrow: Bool
+
+    /// The outer display on its side.
+    let onSide: Bool
 
     /// How far down the band the camera and the clock reach, with a margin
     /// (measured on the outer display of iPhone Duo: the battery ring ends at
     /// 151 pt, at 162 pt while the location arrow is shown above the clock).
     static let clockHeight: CGFloat = 172
+
+    /// How far from its corner the camera reaches on the outer display on its
+    /// side (about 71 pt), with a margin.
+    static let cameraHeight: CGFloat = 80
+
+    /// How much of the top of the band is taken.
+    var top: CGFloat {
+        if !onSide { Self.clockHeight } else if edge == .leading { Self.cameraHeight } else { 0 }
+    }
+
+    /// How much of the bottom of the band is taken.
+    var bottom: CGFloat { onSide && edge == .trailing ? Self.cameraHeight : 0 }
 }
 
 extension EnvironmentValues {
@@ -28,10 +49,9 @@ extension EnvironmentValues {
 /// keep clear of it (`sideBand` in the environment gives its width).
 ///
 /// On a wide screen the pages (640 pt at most) and the driving screen stay
-/// clear of the band on their own. On a narrow one (the outer display) the
-/// top of each screen makes room for the clock (`PageHeader`, the driving
-/// screen). A narrow screen on its side keeps the safe area: the camera and
-/// the clock are elsewhere on the band there, and it has not been laid out.
+/// clear of the band on their own. On a narrow one (the outer display) each
+/// screen makes room at the taken end of the band (`PageHeader`, `Page`, the
+/// driving screen).
 struct AcrossSideBand<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -60,7 +80,7 @@ struct AcrossSideBand<Content: View>: View {
         guard let edge else { return nil }
         let width = edge == .trailing ? insets.trailing : insets.leading
         let narrow = geo.size.width + width < 800
-        if narrow, geo.size.width + width > geo.size.height { return nil }
-        return SideBand(edge: edge, width: width, narrow: narrow)
+        let onSide = narrow && geo.size.width + width > geo.size.height
+        return SideBand(edge: edge, width: width, narrow: narrow, onSide: onSide)
     }
 }

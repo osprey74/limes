@@ -54,6 +54,23 @@ private struct RootView: View {
         default: break
         }
     }
+
+    /// `-debug_orientation left` (or `right`; `portrait` to turn it back) turns the
+    /// screen on its side, which the simulator of a folding phone cannot be told
+    /// to do from the command line.
+    private func turn() {
+        let mask: UIInterfaceOrientationMask? =
+            switch UserDefaults.standard.string(forKey: "debug_orientation") {
+            case "left": .landscapeLeft
+            case "right": .landscapeRight
+            case "portrait": .portrait
+            default: nil
+            }
+        guard let mask else { return }
+        for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
+        }
+    }
     #endif
 
     private func openPlans(from: Screen) {
@@ -87,5 +104,8 @@ private struct RootView: View {
                 )
             }
         }
+        #if DEBUG
+        .onAppear { turn() }
+        #endif
     }
 }

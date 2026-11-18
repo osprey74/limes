@@ -55,6 +55,13 @@ struct DriveScreen: View {
 
         return GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
+            // A wide screen upright (the inner display of a folding phone): the
+            // line goes across the middle of the display, not of the safe area,
+            // which starts below the band of the clock.
+            let upper: CGFloat? = !landscape && geo.size.width >= 600
+                ? (geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom) / 2
+                    - geo.safeAreaInsets.top - topBarHeight
+                : nil
             VStack(spacing: 0) {
                 topBar
                 if landscape {
@@ -73,7 +80,11 @@ struct DriveScreen: View {
                     limit(locked: locked, state: state, stale: stale, sign: 220, note: note)
                         .padding(.horizontal, sideBand?.narrow == true ? sideBand!.width : 0)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Palette.line.frame(height: 1).padding(.horizontal, 16)
+                        .frame(height: upper.map { max(0, $0) })
+                    // No line on the outer display: it would run under the clock.
+                    if sideBand?.narrow != true {
+                        Palette.line.frame(height: 1).padding(.horizontal, 16)
+                    }
                     SpeedPanel(state: state, stale: stale, figure: 140)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -83,7 +94,8 @@ struct DriveScreen: View {
                     .foregroundStyle(Palette.muted)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 24)
+                    // Clear of a camera in the lower corner of the side band.
+                    .padding(.horizontal, max(24, sideBand?.bottom ?? 0))
                     .padding(.vertical, landscape ? 6 : 10)
             }
         }
@@ -97,6 +109,9 @@ struct DriveScreen: View {
             LimitPanel(state: state, stale: stale, sign: sign, note: note)
         }
     }
+
+    /// The button and the room above and below it.
+    private let topBarHeight: CGFloat = 60
 
     private var topBar: some View {
         let version = data.installed.compactMap(\.version).max()
@@ -117,8 +132,11 @@ struct DriveScreen: View {
         }
         // The clock is at the top of the side band: the button stays beside it,
         // and the same room is left on the other side so the label stays centered.
-        .padding(.horizontal, 16 + (sideBand?.width ?? 0))
+        // On the outer display on its side there is no clock, and the camera is
+        // never in the corner of the button.
+        .padding(.horizontal, 16 + (sideBand.map { $0.onSide ? 0 : $0.width } ?? 0))
         .padding(.vertical, 8)
+        .frame(height: topBarHeight)
     }
 }
 

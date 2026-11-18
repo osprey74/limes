@@ -168,9 +168,10 @@ struct Chevron: View {
 }
 
 /// The top of a page: the back button, the title and any words under them.
-/// On a narrow screen drawn across the side band it keeps out of the band and
-/// is tall enough for what follows, which is as wide as the screen, to start
-/// below the clock (the page starts 16 pt from the top).
+/// On a narrow screen drawn across the side band, where the top of the band is
+/// taken (the clock, or the camera), it keeps out of the band and is tall
+/// enough for what follows, which is as wide as the screen, to start below
+/// (the page starts 16 pt from the top).
 struct PageHeader<Content: View>: View {
     /// The spacing of the page it is on.
     var spacing: CGFloat = 24
@@ -178,10 +179,10 @@ struct PageHeader<Content: View>: View {
     @Environment(\.sideBand) private var sideBand
 
     var body: some View {
-        let band = sideBand.flatMap { $0.narrow ? $0 : nil }
+        let band = sideBand.flatMap { $0.narrow && $0.top > 0 ? $0 : nil }
         VStack(alignment: .leading, spacing: 12) { content }
             .padding(band?.edge == .leading ? .leading : .trailing, band?.width ?? 0)
-            .frame(minHeight: band == nil ? nil : SideBand.clockHeight - 16 - spacing, alignment: .top)
+            .frame(minHeight: band.map { max(0, $0.top - 16 - spacing) }, alignment: .top)
     }
 }
 
@@ -189,13 +190,16 @@ struct PageHeader<Content: View>: View {
 struct Page<Content: View>: View {
     var spacing: CGFloat = 24
     @ViewBuilder var content: Content
+    @Environment(\.sideBand) private var sideBand
 
     var body: some View {
+        // The last rows can be scrolled clear of a camera in the lower corner.
+        let camera = sideBand.flatMap { $0.narrow ? $0.bottom : nil } ?? 0
         ScrollView {
             VStack(alignment: .leading, spacing: spacing) { content }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-                .padding(.bottom, 40)
+                .padding(.bottom, max(40, camera))
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
         }
