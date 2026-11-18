@@ -131,17 +131,27 @@ Play Console の「ポリシー」＞「アプリのコンテンツ」。
 | --- | --- |
 | プライバシーポリシー | <https://limes.osprey74.com/privacy/> |
 | 広告 | 広告なし |
-| アプリのアクセス権 | すべての機能を特別なアクセス権なしで利用できる（ログインなし。入れた直後は無料期間で全機能が使える） |
-| コンテンツのレーティング | 質問票のカテゴリは「ユーティリティ、仕事効率化、通信、その他」。質問にはすべて「いいえ」（全年齢になる見込み） |
+| ログインの詳細（旧「アプリのアクセス権」） | アクセス制限あり：「はい」。ユーザー名・パスワードは空欄にし、説明に下の英文を入れる |
+| コンテンツのレーティング | カテゴリは「その他のすべてのアプリの種類」。デジタル商品の購入の質問だけ「はい」（定期購入があるため。続けて出るルートボックスなどの質問は「いいえ」）、ほかはすべて「いいえ」。結果（2026-11-18）：IARC Generic 3+、ESRB 全ユーザー対象、PEGI 3、USK 0、ブラジル（ClassInd）14歳以上 |
 | ターゲット ユーザー | 18歳以上（運転者向け） |
 | データ セーフティ | `release-prep.md` の 4 のとおり（デバイスまたはその他の ID、正確な位置情報。共有なし、転送時に暗号化） |
+| データ セーフティの追加の質問 | アカウントの作成：できない（ログインなし）。一時的な処理か：どちらのデータも「いいえ」（ID はサーバーに残す。位置情報は Google の `Geocoder` に送られ、その先の扱いをこちらで保証できないので、控えめな側に答える。こちらの判断） |
 | 広告 ID | 使用しない（結合後のマニフェストに `AD_ID` の権限がないことを 2026-11-18 に確かめた） |
 | 政府のアプリ | いいえ |
 | 金融取引機能 | なし |
 | 健康 | なし |
 | ニュースアプリ | いいえ |
 
-- アプリのアクセス権を「制限なし」とするのは、こちらの判断（Google に確かめたものではない）。審査で有料機能の見方を求められたら、ライセンステスターでの購入手順か、無料期間で全機能が見られることを伝える
+- ログインの詳細：画面の説明で「はい」の条件に「定期購入」が挙がり、「Google はアプリの審査を行うにあたり、アカウントの新規作成、個人アカウントを使用する購入、無料試用を行うことはできません」とあるため、「はい」にした（2026-11-18）。アプリ独自の無料期間は登録も支払い方法も要らず自動で始まるので、それで有料機能を見られることを説明に書く。審査で無料試用と同じと見なされて差し戻されたら、そのとき対策を考える（アプリに独自の解放手段は入れない）
+- 入力した値：名前「No sign-in (app's own free trial)」、ユーザー名・パスワードは空欄、「すべての機能とコンテンツ…を制限なくご利用いただけます」にチェック。「アプリへのアクセスに必要なその他の情報」（500字まで。下の文は409字。審査担当者が日本語を読めなくても分かるよう、画面の文言でなくアイコンで場所を示す）：
+
+```text
+No sign-in or payment needed. The app's own 14-day free trial starts by itself at the first data download (not a store trial, no payment method) and unlocks every paid feature.
+1. Tap the gear icon, then the "+" row (data download). Choose Tokushima (8.5 MB) and download.
+2. Simulate a moving location on a road in Tokushima, Japan: the estimated speed limit appears.
+Plans and prices: gear icon > first row.
+```
+
 - 権限（結合後のマニフェスト、2026-11-18）：`INTERNET`、`ACCESS_NETWORK_STATE`、`ACCESS_FINE_LOCATION`、`ACCESS_COARSE_LOCATION`、`BILLING`、`WAKE_LOCK`、`RECEIVE_BOOT_COMPLETED`、`FOREGROUND_SERVICE`（あとの3つは WorkManager のもの）。バックグラウンドの位置情報は使わないので、位置情報の権限の申告フォームは出てこない見込み
 - プライバシーポリシーはストアの欄とアプリ内の両方に要る（<https://support.google.com/googleplay/android-developer/answer/10144311> "All apps must post a privacy policy link in the designated field within Play Console, and a privacy policy link or text within the app itself."）。アプリ内は設定画面の「情報」と有料プラン画面に置いた（`android/app/build.gradle.kts` の `PRIVACY_URL`）
 - 審査向けの説明が要る欄には、`release-prep.md` の 5 の内容を入れる（Google Play 向けは `CLGeocoder` を `Geocoder`、App Store を Google Play と読み替える）
@@ -150,8 +160,10 @@ Play Console の「ポリシー」＞「アプリのコンテンツ」。
 
 2023年11月13日より後に作った個人のデベロッパー アカウントでは、製品版を申請する前に、クローズド テストを「12人以上のテスターが14日以上続けて参加」した状態で行う必要がある（<https://support.google.com/googleplay/android-developer/answer/14151465> "a minimum of 12 testers who have been opted in continuously for at least 14 days"、2026-11-18 確認）。
 
-- 対象かどうかは Play Console のダッシュボードで分かる（対象なら、製品版のページに「製品版へのアクセスを申請」が出る）
-- 対象の場合、公開日は早くても「クローズド テストを始めた日＋14日＋審査」になる。iOS 版は「手動でリリース」にしてあるので、それに合わせて公開日を決める
+- Limes は対象（2026-11-18、ダッシュボードで確認。「製品版へのアクセスの申請」に3つの条件と、押せない「本番環境へのアクセスを申請」が出ていた）
+- テスターは Testers Community（<https://www.testerscommunity.com/>）で集める（これまでのアプリと同じ）。サービスのダッシュボードに出る Google グループのアドレスをクローズド テストのテスター欄に入れ、審査を通ったらオプトインのリンクをサービスに提出する。テスト期間は16日
+- サービスのテスターは世界中にいる（"Just make sure your closed test track is available in the testers' countries"）。国 / 地域はトラックごとに設定でき、クローズド テストは「すべての国」、製品版は日本のみにする。日本の外では標識が「不明」になるだけで、データのダウンロードと無料期間は国に関係なく動く
+- 公開日は早くても「クローズド テストの審査＋16日＋申請の審査」になる
 
 ## 6. 手順
 
@@ -159,9 +171,9 @@ Play Console の「ポリシー」＞「アプリのコンテンツ」。
 2. 内部テストに新しいリリースとして出し、Play ストアから入れたアプリで、起動・データのダウンロード・購入（ライセンステスター）・プライバシーポリシーのリンクを確かめる
 3. 「ストアの掲載情報」に 1・2 の値と画像を入れる
 4. 「アプリのコンテンツ」に 4 の回答を入れる
-5. 「製品版」＞「国 / 地域」で日本だけを選ぶ
-6. 5 のテスト要件の対象なら、クローズド テストを作って同じ App Bundle を出し、テスターを集める。対象でなければ 7 へ
-7. 製品版のリリースを作り、内部テストの App Bundle を昇格させて審査へ出す。「公開の概要」のページで管理対象の公開（Managed publishing）を有効にしておくと、審査を通ったあと自分で公開する日を選べるので、iOS 版と日をそろえられる
+5. 「製品版」＞「国 / 地域」で日本だけを選ぶ（製品版のページは承認後に使えるようになる。クローズド テストのトラックは「すべての国」）
+6. クローズド テストを作って同じ App Bundle を出し、5 のとおりテスターを集める。16日たったら「本番環境へのアクセスを申請」
+7. 承認されたら、製品版のリリースを作り、内部テストの App Bundle を昇格させて審査へ出す。「公開の概要」のページで管理対象の公開（Managed publishing）を有効にしておくと、審査を通ったあと自分で公開する日を選べるので、iOS 版と日をそろえられる
 
 リリースノート（日本語）：
 
