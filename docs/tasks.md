@@ -12,7 +12,6 @@
   - 横向きで縦帯が左に来る向きのカメラの位置（上の角としている）。スクリーンショットにカメラは写らず、Device Hub の端末の絵は左右どちらの向きでも同じなので、Device Hub で端末を回すか実機で見る
   - 内側の画面（横）と通常の iPhone で表示が変わっていないこと。内側・縦向きは走行画面だけ確かめた（分割線は 2853 px のうち 1427〜1429 px）
   - 半開きの姿勢。折り目の位置は `GeometryProxy.reservedRegions(kind: .division, …)` で取れる（iOS 27.1 以降。`Rindo-iOS` の `FoldLayout.swift` に例がある）
-  - `screenshots/ios/duo/outer-02-drive.png` の撮り直し（縦向きの分割線をなくしたため。位置情報を流して標識が出た状態で撮る）
 - 内側（横・縦）、通常の iPhone で各画面を撮って確かめる。開閉はコマンドからはできないので、シミュレーター（Device Hub）での操作が要る。回転はデバッグビルドの起動引数 `-debug_orientation left`（`right`・`portrait`）でできる
 - 表示が変わった画面は `screenshots/ios/duo/` を撮り直す（有料プランは Xcode から実行して価格を出す）
 - `ios/README.md` の「iPhone Duo」を合わせて直す
