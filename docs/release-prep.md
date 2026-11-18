@@ -21,6 +21,7 @@
 - 公開先：`https://limes.osprey74.com/privacy/`（2026-11-16 公開。`site/` を変えたコミットが `main` に入ると `.github/workflows/site.yml` が置き直す。`docs/data-hosting.md`）。App Store Connect と Google Play Console への URL の登録はこれから
 - データの取得先は、お名前.com のレンタルサーバー（運営：GMOインターネット株式会社）として書いてある（2026-11-16、Android 版の配信 URL の切り替えに合わせて、上の表・下の 3・ポリシー本文を書き換えた）。申告の内容は変えていない（2026-11-15決定。`docs/data-hosting.md` の 6）。iOS 版の配信 URL も 2026-11-16 に切り替えた
 - アプリ内のリンク（iOS 版）：有料プラン画面と設定画面の「情報」に、プライバシーポリシーと利用規約（Apple の標準 EULA）へのリンクがある（2026-11-17。`ios/Limes/Config.swift`）。App Store に入れる文面と登録の手順は `app-store-listing.md`
+- アプリ内のリンク（Android 版）：設定画面の「情報」と有料プラン画面に、プライバシーポリシーへのリンクがある（2026-11-18。`android/app/build.gradle.kts` の `PRIVACY_URL`）。Google Play に入れる文面と登録の手順は `play-store-listing.md`
 - 問い合わせ先：GitHub Issues（<https://github.com/osprey74/limes/issues>）
 - アプリの挙動を変えたら（送信する情報、外部サービス、位置情報の使い方）、ポリシー・下の申告・`ios/Limes/PrivacyInfo.xcprivacy` の3つをそろえて直す
 
