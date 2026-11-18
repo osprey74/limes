@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,6 +74,11 @@ private val SignRed = Color(0xFFD7262E)
 private val SignRedFaded = Color(0xFFEB9297)
 private val SignBlue = Color(0xFF1D4E9E)
 
+/** Road name, confidence pill and the gaps between them and the sign. */
+private val LIMIT_TEXT_HEIGHT = 104.dp
+private val NOTE_HEIGHT = 30.dp
+private val SMALLEST_SIGN = 120.dp
+
 private const val DISCLAIMER_SHORT = "表示される速度は公開データからの推定です。実際の最高速度は現地の標識・標示に従ってください。"
 
 @Composable
@@ -133,29 +139,29 @@ fun DriveScreen(app: LimesApp, onSettings: () -> Unit, onSubscribe: () -> Unit) 
             }
         }
     }
-    val limit: @Composable (Dp) -> Unit = { sign ->
-        if (locked) LockedPanel(onSubscribe) else LimitPanel(
-            state = state,
-            stale = stale,
-            sign = sign,
-            note = when {
-                !permitted -> "位置情報を許可すると速度を表示します"
-                installed.isEmpty() -> "データがありません。設定からダウンロードしてください"
-                else -> null
-            },
-        )
+    val note = when {
+        !permitted -> "位置情報を許可すると速度を表示します"
+        installed.isEmpty() -> "データがありません。設定からダウンロードしてください"
+        else -> null
+    }
+    // The sign shrinks to the height there is, so that the road name and the
+    // confidence pill stay in view on short (16:9) screens.
+    val limit: @Composable (Dp, Dp) -> Unit = { largest, height ->
+        val reserve = if (note != null) LIMIT_TEXT_HEIGHT + NOTE_HEIGHT else LIMIT_TEXT_HEIGHT
+        val sign = (height - reserve).coerceIn(SMALLEST_SIGN, largest)
+        if (locked) LockedPanel(onSubscribe) else LimitPanel(state = state, stale = stale, sign = sign, note = note)
     }
 
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding().navigationBarsPadding()) {
         top()
         if (landscape) {
             Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp)) {
-                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) { limit(170.dp) }
+                BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) { limit(170.dp, maxHeight) }
                 Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 8.dp).background(Palette.Line))
                 Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) { SpeedPanel(state, stale) }
             }
         } else {
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { limit(220.dp) }
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { limit(220.dp, maxHeight) }
             Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(Palette.Line))
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { SpeedPanel(state, stale) }
         }
