@@ -13,8 +13,8 @@ android {
         applicationId = "com.osprey74.limes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.0.0"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
@@ -23,6 +23,8 @@ android {
         buildConfigField("String", "DATA_BASE_URL", "\"https://limes.osprey74.com/data/\"")
         // Records when each device started its free trial (server/).
         buildConfigField("String", "TRIAL_URL", "\"https://limes-trial.osprey74.workers.dev/v1/trial\"")
+        // The privacy policy (site/privacy/index.html), opened in the browser.
+        buildConfigField("String", "PRIVACY_URL", "\"https://limes.osprey74.com/privacy/\"")
     }
 
     buildTypes {

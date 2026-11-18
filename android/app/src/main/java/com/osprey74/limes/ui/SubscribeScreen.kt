@@ -107,6 +107,7 @@ fun SubscribeScreen(app: LimesApp, backLabel: String, onBack: () -> Unit) {
             val uri = Uri.parse("https://play.google.com/store/account/subscriptions?sku=${Billing.PRODUCT}&package=${context.packageName}")
             context.startActivity(Intent(Intent.ACTION_VIEW, uri))
         }
+        FlatButton("プライバシーポリシー", Modifier.fillMaxWidth()) { openPrivacyPolicy(context) }
     }
 }
 

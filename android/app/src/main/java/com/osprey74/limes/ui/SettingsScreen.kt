@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -75,6 +76,7 @@ const val ATTRIBUTION =
 @Composable
 fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit, onSubscribe: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val installed by app.data.installed.collectAsState()
     val published by app.data.published.collectAsState()
     val lastUpdate by app.data.lastUpdate.collectAsState()
@@ -170,6 +172,10 @@ fun SettingsScreen(app: LimesApp, onBack: () -> Unit, onDownload: () -> Unit, on
             }
             ExpandableText("データの出典とライセンス", ATTRIBUTION)
             ExpandableText("免責事項", DISCLAIMER)
+            CardRow(minHeight = 52, onClick = { openPrivacyPolicy(context) }) {
+                Text("プライバシーポリシー", color = Palette.Text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                Text("ブラウザで開く", color = Palette.Muted, fontSize = 14.sp)
+            }
         }
 
         Text(DISCLAIMER, color = Palette.Muted, fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))

@@ -1,5 +1,8 @@
 package com.osprey74.limes.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.osprey74.limes.BuildConfig
 
 val CardShape = RoundedCornerShape(16.dp)
 val ButtonShape = RoundedCornerShape(12.dp)
@@ -108,6 +112,16 @@ fun ToggleRow(label: String, note: String? = null, checked: Boolean, first: Bool
             ),
         )
     }
+}
+
+/**
+ * Opens the privacy policy in the browser. Google Play asks for the link in
+ * the app itself as well as on the store page (User Data policy).
+ */
+fun openPrivacyPolicy(context: Context) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(BuildConfig.PRIVACY_URL))
+    // No browser on the device: nothing to open.
+    runCatching { context.startActivity(intent) }
 }
 
 /** A status with a dot, e.g. 最新 / 更新待ち. */
